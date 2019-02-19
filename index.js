@@ -6,7 +6,7 @@ server = http.createServer(app),
 io = require('socket.io').listen(server);
 
 // database connection
-const database = require('./database.js'),
+// const database = require('./database.js'),
 turf = require('turf');
 
 // weather data connection
@@ -14,8 +14,12 @@ turf = require('turf');
 
 
 app.get('/', (req, res) => {
-res.send('Server is running on default port')
-});
+  res.send('Chat Server is running on port 8080')
+  });
+  
+  server.listen(8080,()=>{
+      console.log('Node app is running on port 8080')
+      });
 
 // Server/App connection
 
