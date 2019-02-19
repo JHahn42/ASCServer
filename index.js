@@ -6,19 +6,16 @@ server = http.createServer(app),
 io = require('socket.io').listen(server);
 
 // database connection
-const database = require('./database.js')
+const database = require('./database.js'),
+turf = require('turf');
+
 // weather data connection
 
 
 
 app.get('/', (req, res) => {
-res.send('Server is running on port 3000')
+res.send('Server is running on default port')
 });
-
-server.listen(3000,()=>{
-    console.log('Node app is running on port 3000')
-    });
-
 
 // Server/App connection
 
@@ -63,6 +60,11 @@ io.on('connection', (socket) => {
     
   })
 
+  socket.on('testconnect', (message) => {
+    socket.emit('reply', {
+      reply: "Server saw " + message
+    })
+  })
 
 });
 

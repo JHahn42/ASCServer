@@ -1,16 +1,21 @@
 var mysql = require('mysql');
 
-var con = mysql.createConnection({
-    host: "localhost",
-    user: "root",
-    password: "stormyChaser10"   
+var pool = mysql.createPool({
+    /* 
+    fill in with database info
+    
+    host     : "ip/url",
+    user     : "username",
+    password : "pass",
+    database : "name of database",
+    port     : 3306
+
+    */
+
 });
 
-con.connect(function(err) {
-    if (err) throw err;
-    console.log("Connected!");
-});
 
+// need to update to pool
 module.exports = {
     // should be able to tell between password incorrect and username not found
     login: (username, password, err) => {
