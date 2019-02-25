@@ -11,7 +11,7 @@ turf = require('turf');
 
 // weather data connection
 
-const port = 3000
+const port = 8080
 
 app.get('/', (req, res) => {
   res.send('Server is running on port ' + port)
