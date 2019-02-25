@@ -11,14 +11,14 @@ turf = require('turf');
 
 // weather data connection
 
-
+const port = 3000
 
 app.get('/', (req, res) => {
-  res.send('Chat Server is running on port 8080')
+  res.send('Server is running on port ' + port)
   });
   
-  server.listen(8080,()=>{
-      console.log('Node app is running on port 8080')
+  server.listen(port,()=>{
+      console.log('Node app is running on port ' + port)
       });
 
 // Server/App connection
@@ -26,6 +26,8 @@ app.get('/', (req, res) => {
 var activePlayers = []
 
 io.on('connection', (socket) => {
+
+  console.log("app connected")
 
   // attempts to login, checking with the database. Result sent to App through string message. 
   // If successful, username is tied to socketid and added to active player list.
@@ -65,9 +67,10 @@ io.on('connection', (socket) => {
   })
 
   socket.on('testconnect', (message) => {
-    socket.emit('reply', {
-      reply: "Server saw " + message
-    })
+    console.log("Server saw " + message)
+    socket.emit('testconnection', {
+      message: message
+    });
   })
 
 });
