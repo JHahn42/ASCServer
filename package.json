@@ -1,13 +1,13 @@
 {
   "name": "ascserver",
-  "version": "0.0.5",
+  "version": "0.0.7",
   "description": "first implementation of ASC server",
   "dependencies": {
     "d3-dsv": "^1.1.1",
     "express": "^4.16.4",
     "mysql": "^2.16.0",
     "socket.io": "^2.2.0",
-    "turf": "^3.0.14"
+    "@turf/turf": "^3.0.14"
   },
   "main": "index.js",
   "devDependencies": {},
@@ -15,14 +15,10 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node index.js"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/JHahn42/ASCServer.git"
-  },
+  
   "author": "",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/JHahn42/ASCServer/issues"
-  },
-  "homepage": "https://github.com/JHahn42/ASCServer#readme"
+  }
 }

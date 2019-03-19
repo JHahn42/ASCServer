@@ -6,12 +6,13 @@ server = http.createServer(app),
 io = require('socket.io').listen(server);
 
 // database connection
-// const database = require('./database.js'),
-turf = require('turf');
+// const database = require('./database.js');
+const turf = require('turf');
+var polyline = require('@mapbox/polyline')
 
 // weather data connection
 
-const port = 8080
+const port = 3000
 
 app.get('/', (req, res) => {
   res.send('Server is running on port ' + port)
@@ -27,7 +28,11 @@ var activePlayers = []
 
 io.on('connection', (socket) => {
 
-  console.log("app connected")
+  
+  socket.Player = new Player(socket, "Player" + activePlayers.length.toString(), 0, 0, false, [-78.2794, 39.2386])
+  activePlayers.push(socket.Player)
+
+  console.log(socket.Player.name + " connected")
 
   // attempts to login, checking with the database. Result sent to App through string message. 
   // If successful, username is tied to socketid and added to active player list.
@@ -59,6 +64,10 @@ io.on('connection', (socket) => {
 
   // remove socketid from all connected list, and remove from activePlayers list
   socket.on('disconnect', () => {
+
+    console.log(socket.Player.name + " disconnected...")
+
+    activePlayers.splice(activePlayers.indexOf(socket.Player),1)
     
   })
 
@@ -66,13 +75,24 @@ io.on('connection', (socket) => {
     
   })
 
-  socket.on('testconnect', (message) => {
-    console.log("Server saw " + message)
-    socket.emit('testconnection', {
-      message: message
-    });
+  socket.on('setTravelRoute', (route) => {
+    var geoJSONroute = polyline.toGeoJSON(route)
+    
+    console.log(socket.Player.name + " going to " + geoJSONroute.coordinates[geoJSONroute.coordinates.length-1])
   })
 
 });
 
 // Gameplay
+
+function Player(socket, name, currentScore, totalScore, isTraveling, currentLocation, route) {
+  this.socket = socket;
+  this.name = name;
+  this.currentScore = currentScore;
+  this.totalScore = totalScore;
+  this.isTraveling = isTraveling;
+  this.currentLocation = currentLocation;
+  this.route = route;
+
+}
+
