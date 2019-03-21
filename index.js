@@ -29,7 +29,7 @@ var activePlayers = []
 io.on('connection', (socket) => {
 
   
-  socket.Player = new Player(socket, "Player" + activePlayers.length.toString(), 0, 0, false, [-78.2794, 39.2386])
+  socket.Player = new Player(socket, "Player" + activePlayers.length.toString(), 0, 0, false, [-85.386521, 40.193382])
   activePlayers.push(socket.Player)
 
   console.log(socket.Player.name + " connected")
@@ -75,16 +75,23 @@ io.on('connection', (socket) => {
     
   })
 
-  socket.on('setTravelRoute', (route) => {
-    var geoJSONroute = polyline.toGeoJSON(route)
+  socket.on('setTravelRoute', (geometry, distance, duration) => {
+    var route = polyline.toGeoJSON(geometry, 6)
+    route.distance = distance
+    route.duration = duration
     
-    console.log(socket.Player.name + " going to " + geoJSONroute.coordinates[geoJSONroute.coordinates.length-1])
+    socket.Player.currentLocation = route.coordinates[0]
+    socket.Player.route = route
+    socket.Player.isTraveling = true
+    console.log(socket.Player.name + " traveling from " + socket.Player.currentLocation + " to " + socket.Player.route.coordinates[socket.Player.route.coordinates.length-1])
+    
+    // beginTravel(socket.Player)
   })
 
 });
 
 // Gameplay
-
+//change to class later
 function Player(socket, name, currentScore, totalScore, isTraveling, currentLocation, route) {
   this.socket = socket;
   this.name = name;
@@ -96,3 +103,25 @@ function Player(socket, name, currentScore, totalScore, isTraveling, currentLoca
 
 }
 
+function beginTravel(player) {
+
+  //km traveled per second
+  var speed = (player.distance/1000)/player.duration
+  var distance = distanceFactor = speed * 3
+  while(player.isTraveling){
+    var line = turf.lineString(player.route.coordinates)
+    var clocation = turf.along(line, distance)
+    console.log(player.name + " now at " + clocation)
+    distance += distanceFactor
+    sleep(3000)
+  }
+}
+
+function sleep(milliseconds) {
+  var start = new Date().getTime();
+  for (var i = 0; i < 1e7; i++) {
+    if ((new Date().getTime() - start) > milliseconds){
+      break;
+    }
+  }
+}
