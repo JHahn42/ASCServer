@@ -17,6 +17,25 @@ var weather = require('./weatherparser.js')
 // get fresh weather data
 var storms = weather.parse()
 
+// 5 minutes
+const scoreTiming = 5000 * 60
+const tornWarnScore = 20
+const tornWatchScore = 15
+const tsWarnScore = 10
+const tsWatchScore = 5
+const wind1 = 5
+const wind5 = 2
+const torn1 = 50
+const torn5 = 10
+const hailsmall1 = 5
+const hailsmall5 = 2
+const hail1inch1 = 10
+const hail1inch5 = 4
+const hail2inch1 = 15
+const hail2inch5 = 8
+const hail3inch1 = 20
+const hail3inch5 = 10
+
 var tornadoWarn = [] 
 var tornadoWatch = [] 
 var tStormWarn = [] 
@@ -24,7 +43,7 @@ var tStormWatch = []
 var wind = []
 var tornado = []
 var hail = []
-setTimeout(() => { fillStormArrays() }, 5000)
+setTimeout(() => { fillStormArrays(); console.log(storms) }, 5000)
 
 
 //start up server listening on chosen port
@@ -230,6 +249,7 @@ function Player(name, currentScore, totalScore, scoreMultiplyer, isTraveling, cu
     this.route = route;
     this.scoreMultiplyer = scoreMultiplyer
     this.stormsInside = []
+    this.pointNearChecked = []
 }
 
 function gameLoop(player) {
@@ -276,28 +296,141 @@ function travel(player) {
 
 // checks if player is in any weather polygons, gives score for every 5 minutes
 function checkScoring(player) {
-    var time = new Date().getMinutes
-    tornadoWarn.forEach(storm => {
+
+    var time = new Date().getTime()
+
+    if(tornadoWarn.length() > 0) {
+        tornadoWarn.forEach(storm => {
+            var poly = turf.polygon(storm)
+            if (turf.booleanPointInPolygon(player.currentLocation, poly)) {
+                if (player.stormsInside.length() > 0) {
+                    player.stormsInside.forEach(stormInside => {
+                        if (turf.booleanEqual(storm, stormInside[0])) {
+                            if (stormInside[1] - time >= scoreTiming) {
+                                player.currentScore += tornWarnScore
+                                player.totalScore += tornWarnScore
+                                stormInside[1] = time 
+                            }
+                        }
+                    });
+                }
+                else {
+                    player.stormsInside.push([storm, time])
+                    player.currentScore += tornWarnScore
+                    player.totalScore += tornWarnScore
+                }
+            }
+        });
+    }
+    if(tornadoWatch.length() > 0) {
+        tornadoWatch.forEach(storm => {
+            var poly = turf.polygon(storm)
+            if (turf.booleanPointInPolygon(player.currentLocation, poly)) {
+                if (player.stormsInside.length() > 0) {
+                    player.stormsInside.forEach(stormInside => {
+                        if (turf.booleanEqual(storm, stormInside[0])) {
+                            if (stormInside[1] - time >= scoreTiming) {
+                                player.currentScore += tornWatchScore
+                                player.totalScore += tornWatchScore
+                                stormInside[1] = time 
+                            }
+                        }
+                    });
+                }
+                else {
+                    player.stormsInside.push([storm, time])
+                    player.currentScore += tornWatchScore
+                    player.totalScore += tornWatchScore
+                }
+            }
+        });
+    }
+
+    if (tStormWarn.length() > 0) {
+        tStormWarn.forEach(storm => {
+            var poly = turf.polygon(storm)
+            if (turf.booleanPointInPolygon(player.currentLocation, poly)) {
+                if (player.stormsInside.length() > 0) {
+                    player.stormsInside.forEach(stormInside => {
+                        if (turf.booleanEqual(storm, stormInside[0])) {
+                            if (stormInside[1] - time >= scoreTiming) {
+                                player.currentScore += tsWarnScore
+                                player.totalScore += tsWarnScore
+                                stormInside[1] = time 
+                            }
+                        }
+                    });
+                }
+                else {
+                    player.stormsInside.push([storm, time])
+                    player.currentScore += tsWarnScore
+                    player.totalScore += tsWarnScore
+                }
+            }
+        });
+    }
+
+    if (tStormWatch.length() > 0) {
+        tStormWatch.forEach(storm => {
+            var poly = turf.polygon(storm)
+            if (turf.booleanPointInPolygon(player.currentLocation, poly)) {
+                if (player.stormsInside.length() > 0) {
+                    player.stormsInside.forEach(stormInside => {
+                        if (turf.booleanEqual(storm, stormInside[0])) {
+                            if (stormInside[1] - time >= scoreTiming) {
+                                player.currentScore += tsWatchScore
+                                player.totalScore += tsWatchScore
+                                stormInside[1] = time 
+                            }
+                        }
+                    });
+                }
+                else {
+                    player.stormsInside.push([storm, time])
+                    player.currentScore += tsWatchScore
+                    player.totalScore += tsWatchScore
+                }
+            }
+        });
+    }
+
+    if (wind.length() > 0 ) { 
+        wind.forEach(storm => {
+            var point = turf.point(storm[1])
+            var found = false
+            if (player.pointNearChecked.length() > 0) {
+                for (var i = 0; i < player.pointNearChecked.length(); i++) {
+                    if (turf.booleanEqual(pointChecked, point)) {
+                        found = true
+                        break
+                    }
+                }
+                if (!found) {
+                    var dist = turf.distance(player.currentLocation, point, units = 'miles')
+                    if (dist > 1 && dist <= 5) {
+                        player.currentScore += wind5
+                        player.totalScore += wind5
+                    }
+                    else if (dist < 1) {
+                        player.currentScore += wind1
+                        player.totalScore += wind1
+                    }
+                }
+            }
+        });
+    }
+
+    if (tornado.length() > 0) {
+        tornado.forEach(storm => {
         
-    });
-    tornadoWatch.forEach(storm => {
+        });
+    }
+
+    if (hail.length() > 0) {
+        hail.forEach(storm => {
         
-    });
-    tStormWarn.forEach(storm => {
-        
-    });
-    tStormWatch.forEach(storm => {
-        
-    });
-    wind.forEach(storm => {
-        
-    });
-    tornado.forEach(storm => {
-        
-    });
-    hail.forEach(storm => {
-        
-    });
+        });
+    }
 }
 
 // create a timer that checks the time every 5 minutes and grabs updated weather while in active game time
