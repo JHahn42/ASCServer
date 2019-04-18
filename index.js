@@ -415,6 +415,7 @@ function checkScoring(player) {
                         player.currentScore += wind1
                         player.totalScore += wind1
                     }
+                    player.pointNearChecked.push(point)
                 }
             }
         });
