@@ -17,6 +17,16 @@ var weather = require('./weatherparser.js')
 // get fresh weather data
 var storms = weather.parse()
 
+var tornadoWarn = [] 
+var tornadoWatch = [] 
+var tStormWarn = [] 
+var tStormWatch = []
+var wind = []
+var tornado = []
+var hail = []
+setTimeout(() => { fillStormArrays() }, 5000)
+
+
 //start up server listening on chosen port
 const port = 3000
 
@@ -41,6 +51,7 @@ var loggedinPlayers = []
 var activeGameTime = true
 const dayBegin = 10
 const dayEnd = 23
+
 startGameTimer()
 
 //start gameplay, should run until end of day
@@ -218,6 +229,7 @@ function Player(name, currentScore, totalScore, scoreMultiplyer, isTraveling, cu
     this.destination = destination;
     this.route = route;
     this.scoreMultiplyer = scoreMultiplyer
+    this.stormsInside = []
 }
 
 function gameLoop(player) {
@@ -254,7 +266,7 @@ function travel(player) {
 
     player.currentLocation = turf.along(player.route, distance)
 
-    console.log(player.name + " now at " + player.currentLocation.geometry.coordinates)
+    // console.log(player.name + " now at " + player.currentLocation.geometry.coordinates)
 
     if (turf.booleanEqual(player.currentLocation, player.destination)) {
         player.isTraveling = false
@@ -264,8 +276,28 @@ function travel(player) {
 
 // checks if player is in any weather polygons, gives score for every 5 minutes
 function checkScoring(player) {
-    inPolyStorm()
-    inPointStorm()
+    var time = new Date().getMinutes
+    tornadoWarn.forEach(storm => {
+        
+    });
+    tornadoWatch.forEach(storm => {
+        
+    });
+    tStormWarn.forEach(storm => {
+        
+    });
+    tStormWatch.forEach(storm => {
+        
+    });
+    wind.forEach(storm => {
+        
+    });
+    tornado.forEach(storm => {
+        
+    });
+    hail.forEach(storm => {
+        
+    });
 }
 
 // create a timer that checks the time every 5 minutes and grabs updated weather while in active game time
@@ -288,7 +320,12 @@ function startGameTimer() {
                 console.log("updating weather...")
                 storms = weather.parse()
                 // wait 5 seconds to push weather to players since I can't figure out await/promise
-                setTimeout(() => { console.log(storms); io.in("loggedin").emit("weatherUpdate", storms)}, 5000)
+                setTimeout(() => { 
+                    console.log(storms) 
+                    fillStormArrays()
+                    io.in("loggedin").emit("weatherUpdate", storms)
+
+                }, 5000)
             }
         }
         else {
@@ -312,4 +349,14 @@ function checkGameTime(d) {
     } else {
         activeGameTime = false
     }
+}
+
+function fillStormArrays() {
+    tornadoWarn = storms.storms[0].instances
+    tornadoWatch = storms.storms[1].instances
+    tStormWarn = storms.storms[2].instances
+    tStormWatch = storms.storms[3].instances
+    wind = storms.storms[4].instances
+    tornado = storms.storms[5].instances
+    hail = storms.storms[6].instances
 }
