@@ -18,18 +18,50 @@ var pool = mysql.createPool({
 // need to update to pool
 module.exports = {
     // should be able to tell between password incorrect and username not found
-    login: (username, password, err) => {
-        if (err) throw err;
-        return "Login Successful";
+    login: (username, password, callback) => {
+
+        pool.getConnection((err, connection) => {
+            if(err) {
+                console.log(err)
+                callback(true)
+                return
+            }
+            var sql = "SELECT currentscore, totalscore, scoremultiplier, currentlocation FROM players WHERE username = \"" + username + "\" AND password = \"" + password + "\""
+            connection.query(sql, [], (err, results) => {
+                connection.release()
+                if(err) {
+                    console.log(err)
+                    callback(true)
+                    return
+                }
+                callback(false, results)
+            })
+        })
+
     },
 
     // should check if username is taken
     newUser: (username, password) => {
-        return "New User Created";
+        pool.getConnection((err, connection) => {
+            if(err) {
+                console.log(err)
+                callback(true)
+                return
+            }
+            var sql = "INSERT INTO players (username, password) VALUES (\"" + username + "\", \"" + password + "\")"
+            connection.query(sql, [], (err, results) => {
+                connection.release()
+                if(err) {
+                    console.log(err)
+                    callback(true)
+                    return
+                }
+                callback(false, results)
+            })
+        })
     },
 
-    // get the scoreing system data from table in database
-    retrieveScoringSystem: () => {
+    saveUser: (username, otherstuff) => {
 
     }
  }
