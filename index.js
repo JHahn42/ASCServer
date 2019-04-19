@@ -36,9 +36,9 @@ const hail2inch5 = 8
 const hail3inch1 = 20
 const hail3inch5 = 10
 
-var tornadoWarn = [] 
-var tornadoWatch = [] 
-var tStormWarn = [] 
+var tornadoWarn = []
+var tornadoWatch = []
+var tStormWarn = []
 var tStormWatch = []
 var wind = []
 var tornado = []
@@ -90,16 +90,16 @@ io.on('connection', (socket) => {
     // attempts to login, checking with the database. Result sent to App through string message. 
     // If successful, username is tied to socketid and added to active player list.
     // may need to change array to dictionary instead, will have to make custom
-    socket.on('login', (username, password) => {
+    socket.on('login', (username, cLocation, cScore, tScore, sMultiplyer) => {
 
         var canLogin = true
         var success = false
 
         // check if player is logged in already
-        for(var i = 0; i < loggedinPlayers.length(); i++) {
+        for (var i = 0; i < loggedinPlayers.length(); i++) {
             var player = loggedinPlayers[i]
             if (player.name == username) {
-                socket.emit("login failed", "Profile is already logged in.")
+                socket.emit("login failed", "Username is already logged in.")
                 canLogin = false
                 break
             }
@@ -107,7 +107,7 @@ io.on('connection', (socket) => {
 
         // if not in loggedin list, check if player was previously loggedin and in active list
         if (canLogin) {
-            for(var i = 0; i < activePlayers.length(); i++) {
+            for (var i = 0; i < activePlayers.length(); i++) {
                 var player = activePlayers[i]
                 if (player.name == username) {
 
@@ -127,58 +127,89 @@ io.on('connection', (socket) => {
             }
         }
 
-        // player is not in active list
-        // check database for player
         if (canLogin && !success) {
-            var result = database.login(username, password)
-            if (result.err) {
-                socket.emit("login failed", "Database Error.")
-            }
-            else {
-                if (result.results != "") {
-                    // split result into parts and feed into new player
-                    // currentscore, totalscore, scoremultiplier, currentlocation
-                    var playerinfo = results.results.split(" ")
-                    socket.player = new Player(socket = socket, name = username, currentScore = playerinfo[0], totalScore = playerinfo[1], 
-                        scoreMultiplyer = playerinfo[2], isTraveling = false, currentLocation = turf.point(playerinfo[3]), destination = null, route = null)
+            socket.player = new Player(socket = socket,
+                                        name = username,
+                                        currentScore = cScore,
+                                        totalScore = tScore,
+                                        scoreMultiplyer = sMultiplyer,
+                                        isTraveling = false,
+                                        currentLocation = cLocation,
+                                        destination = null,
+                                        route = null)
 
-                    loggedinPlayers.push(socket.player)
-
-                    socket.join("loggedin")
-
-
-                    if (activeGameTime) {
-                        socket.emit("login success first login of day", socket.player.currentScore, socket.player.totalScore, socket.player.currentLocation)
-                    }
-                    else {
-                        socket.emit("end of day", socket.player.currentScore, socket.player.totalScore, socket.player.currentLocation)
-                    }
-
-                }
-                // no such user found/password incorrect
-                else {
-                    socket.emit("login failed", "Username/Password combination not found.")
-                }
-            }
-        }
-    })
-
-    // create a new user
-    socket.on('newUser', (username, password) => {
-
-        var results = database.newUser(username, password)
-        
-        if (results.err) {
-            socket.emit("new user failed")
-        }
-        else {
-            socket.player = new Player(socket = socket, name = username, currentScore = 0, totalScore = 0, scoreMultiplyer = 1, isTraveling = false, currentLocation = null)
-            activePlayers.push(socket.player)
             loggedinPlayers.push(socket.player)
             socket.join("loggedin")
-            socket.emit("new user successful")
+
+            if (activeGameTime) {
+                socket.emit("login success", player.currentScore, player.totalScore, player.currentLocation)
+            }
+            else {
+                socket.emit("end of day", player.currentScore, player.totalScore, player.currentLocation)
+            }
+            break
+
         }
+
+        // player is not in active list
+        // check database for player
+
+        // if (canLogin && !success) {
+        //     var result = database.login(username, password)
+        //     if (result.err) {
+        //         socket.emit("login failed", "Database Error.")
+        //     }
+        //     else {
+        //         if (result.results != "") {
+        //             // split result into parts and feed into new player
+        //             // currentscore, totalscore, scoremultiplyer, currentlocation
+        //             var playerinfo = results.results.split(" ")
+        //             socket.player = new Player(socket = socket, name = username, currentScore = playerinfo[0], totalScore = playerinfo[1], 
+        //                 scoreMultiplyer = playerinfo[2], isTraveling = false, currentLocation = turf.point(playerinfo[3]), destination = null, route = null)
+
+        //             loggedinPlayers.push(socket.player)
+
+        //             socket.join("loggedin")
+
+
+        //             if (activeGameTime) {
+        //                 socket.emit("login success first login of day", socket.player.currentScore, socket.player.totalScore, socket.player.currentLocation)
+        //             }
+        //             else {
+        //                 socket.emit("end of day", socket.player.currentScore, socket.player.totalScore, socket.player.currentLocation)
+        //             }
+
+        //         }
+        //         // no such user found/password incorrect
+        //         else {
+        //             socket.emit("login failed", "Username/Password combination not found.")
+        //         }
+        //     }
+        // }
     })
+
+    // // create a new user
+    // socket.on('newUser', (username, password) => {
+
+    //     var results = database.newUser(username, password)
+
+    //     if (results.err) {
+    //         socket.emit("new user failed")
+    //     }
+    //     else {
+    //         socket.player = new Player(socket = socket, name = username, currentScore = 0, totalScore = 0, scoreMultiplyer = 1, isTraveling = false, currentLocation = null)
+    //         activePlayers.push(socket.player)
+    //         loggedinPlayers.push(socket.player)
+    //         socket.join("loggedin")
+    //         if (activeGameTime) {
+    //             socket.emit("new user successful")
+    //         }
+    //         else {
+    //             socket.emit("end of day", player.currentScore, player.totalScore, player.currentLocation)
+    //         }
+    //         break
+    //     }
+    // })
 
     // untie player profile from socket and remove from logged in list, 
     // allowing player to relog in or log into a new account without needing to exit the App
@@ -192,7 +223,7 @@ io.on('connection', (socket) => {
 
     // remove socketid Player, and remove from loggedinPlayers list
     socket.on('disconnect', () => {
-        if(socket.player != null) {
+        if (socket.player != null) {
             console.log(socket.player.name + " disconnected...")
             loggedinPlayers.splice(loggedinPlayers.indexOf(socket.Player), 1)
             socket.leave("loggedin")
@@ -222,7 +253,7 @@ io.on('connection', (socket) => {
         socket.player.startTime = new Date().getTime()
         socket.player.isTraveling = true
         socket.player.duration = duration
-        console.log(socket.player.name + " traveling from " + socket.player.currentLocation.geometry.coordinates + " to " + socket.player.destination.geometry.coordinates + " for " + duration/60 + " minutes")
+        console.log(socket.player.name + " traveling from " + socket.player.currentLocation.geometry.coordinates + " to " + socket.player.destination.geometry.coordinates + " for " + duration / 60 + " minutes")
     })
 
     socket.on('stopTravel', () => {
@@ -234,7 +265,7 @@ io.on('connection', (socket) => {
         var now = new Date().getTime()
 
         var timeleft = socket.player.duration - ((now - start) / 1000)
-        
+
         socket.emit('updatePlayer', {
             currentLocation: socket.player.currentLocation.geometry.coordinates,
             currentScore: socket.player.currentScore,
@@ -304,7 +335,7 @@ function travel(player) {
     if (turf.booleanEqual(player.currentLocation, player.destination)) {
         player.isTraveling = false
         player.socket.emit("destination reached", player.currentLocation)
-        console.log(player.name + " reached destination in " + ((((new Date().getTime()) - player.startTime) / 1000)/60) + " minutes.")
+        console.log(player.name + " reached destination in " + ((((new Date().getTime()) - player.startTime) / 1000) / 60) + " minutes.")
     }
 }
 
@@ -324,7 +355,7 @@ function checkScoring(player) {
 
     function scorePolyStorm(storms, scoring) {
 
-        if(storms.length > 0) {
+        if (storms.length > 0) {
             storms.forEach(storm => {
                 var poly = turf.polygon(storm)
                 if (turf.booleanPointInPolygon(player.currentLocation, poly)) {
@@ -334,7 +365,7 @@ function checkScoring(player) {
                                 if (stormInside[1] - time >= scoreTiming) {
                                     player.currentScore += Math.round(scoring * player.scoreMultiplyer)
                                     player.totalScore += Math.round(scoring * player.scoreMultiplyer)
-                                    stormInside[1] = time 
+                                    stormInside[1] = time
                                 }
                             }
                         });
@@ -350,7 +381,7 @@ function checkScoring(player) {
     }
 
     function scorePointStorm(storms, scoreone, scorefive, isHail = false) {
-        if (storms.length > 0 ) { 
+        if (storms.length > 0) {
             storms.forEach(storm => {
                 var point = turf.point(storm.coordinates)
                 var found = false
@@ -427,8 +458,8 @@ function startGameTimer() {
     var d = new Date()
     checkGameTime(d)
     console.log("game time is " + activeGameTime)
-    var intervalId = setInterval(runGameClock, 60*1000 - d.getSeconds()*1000)
-    
+    var intervalId = setInterval(runGameClock, 60 * 1000 - d.getSeconds() * 1000)
+
     function runGameClock() {
         var d = new Date()
         console.log("Time is " + d.getHours() + ":" + d.getMinutes() + ":" + d.getSeconds())
@@ -436,12 +467,12 @@ function startGameTimer() {
 
         if (activeGameTime) {
             // update weather every 5 minutes
-            if (d.getMinutes() % 5 == 0){
+            if (d.getMinutes() % 5 == 0) {
                 console.log("updating weather...")
                 storms = weather.parse()
                 // wait 5 seconds to push weather to players since I can't figure out await/promise
-                setTimeout(() => { 
-                    console.log(storms) 
+                setTimeout(() => {
+                    console.log(storms)
                     fillStormArrays()
                     io.in("loggedin").emit("weatherUpdate", storms)
 
@@ -453,7 +484,7 @@ function startGameTimer() {
         }
         clearInterval(intervalId)
         d = new Date()
-        intervalId = setInterval(runGameClock, 60*1000 - d.getSeconds()*1000)
+        intervalId = setInterval(runGameClock, 60 * 1000 - d.getSeconds() * 1000)
 
     }
 }
@@ -465,7 +496,7 @@ function checkGameTime(d) {
             // start game loop at start of day
             gameLoop()
             activeGameTime = true
-        } 
+        }
     } else {
         activeGameTime = false
     }
