@@ -71,7 +71,7 @@ var activeGameTime = true
 const dayBegin = 10
 const dayEnd = 23
 
-// startGameTimer()
+startGameTimer()
 
 //start gameplay, should run until end of day
 gameLoop()
@@ -79,7 +79,7 @@ gameLoop()
 io.on('connection', (socket) => {
 
 
-    socket.player = new Player(name = "Player" + loggedinPlayers.length.toString(),
+    socket.player = new Player(socket = socket, name = "Player" + loggedinPlayers.length.toString(),
         currentScore = 0, totalScore = 0, scoreMultiplyer = 1, isTraveling = false, currentLocation = turf.point([-85.386521, 40.193382]))
 
     activePlayers.push(socket.player)
@@ -113,6 +113,7 @@ io.on('connection', (socket) => {
 
                     loggedinPlayers.push(player)
                     socket.join("loggedin")
+                    player.socket = socket
                     success = true
 
                     if (activeGameTime) {
@@ -138,10 +139,11 @@ io.on('connection', (socket) => {
                     // split result into parts and feed into new player
                     // currentscore, totalscore, scoremultiplier, currentlocation
                     var playerinfo = results.results.split(" ")
-                    socket.player = new Player(name = username, currentScore = playerinfo[0], totalScore = playerinfo[1], 
+                    socket.player = new Player(socket = socket, name = username, currentScore = playerinfo[0], totalScore = playerinfo[1], 
                         scoreMultiplyer = playerinfo[2], isTraveling = false, currentLocation = turf.point(playerinfo[3]), destination = null, route = null)
 
                     loggedinPlayers.push(socket.player)
+
                     socket.join("loggedin")
 
 
@@ -170,7 +172,7 @@ io.on('connection', (socket) => {
             socket.emit("new user failed")
         }
         else {
-            socket.player = new Player(name = username, currentScore = 0, totalScore = 0, scoreMultiplyer = 1, isTraveling = false, currentLocation = null)
+            socket.player = new Player(socket = socket, name = username, currentScore = 0, totalScore = 0, scoreMultiplyer = 1, isTraveling = false, currentLocation = null)
             activePlayers.push(socket.player)
             loggedinPlayers.push(socket.player)
             socket.join("loggedin")
@@ -184,6 +186,7 @@ io.on('connection', (socket) => {
         loggedinPlayers.splice(loggedinPlayers.indexOf(socket.Player), 1)
         socket.leave("loggedin")
         console.log(socket.player.name + "logged off...")
+        socket.player.socket = null
         socket.player = null
     })
 
@@ -193,13 +196,15 @@ io.on('connection', (socket) => {
             console.log(socket.player.name + " disconnected...")
             loggedinPlayers.splice(loggedinPlayers.indexOf(socket.Player), 1)
             socket.leave("loggedin")
+            socket.player.socket = null
             socket.player = null
         }
 
     })
 
-    socket.on('startLocationSelect', (geopoint) => {
-
+    socket.on('startLocationSelect', (geopoint, scoreMultiplyer) => {
+        socket.player.currentLocation = turf.point(geopoint)
+        socket.player.scoreMultiplyer = scoreMultiplyer
     })
 
     // geometry is an encoded polyline, distance meters, duration in seconds
@@ -245,7 +250,8 @@ io.on('connection', (socket) => {
 
 // Gameplay
 
-function Player(name, currentScore, totalScore, scoreMultiplyer, isTraveling, currentLocation, destination, route) {
+function Player(socket, name, currentScore, totalScore, scoreMultiplyer, isTraveling, currentLocation, destination, route) {
+    this.socket = socket
     this.name = name;
     this.currentScore = currentScore;
     this.totalScore = totalScore;
@@ -297,6 +303,7 @@ function travel(player) {
 
     if (turf.booleanEqual(player.currentLocation, player.destination)) {
         player.isTraveling = false
+        player.socket.emit("destination reached", player.currentLocation)
         console.log(player.name + " reached destination in " + ((((new Date().getTime()) - player.startTime) / 1000)/60) + " minutes.")
     }
 }
@@ -306,140 +313,112 @@ function checkScoring(player) {
 
     var time = new Date().getTime()
 
-    if(tornadoWarn.length > 0) {
-        tornadoWarn.forEach(storm => {
-            var poly = turf.polygon(storm)
-            if (turf.booleanPointInPolygon(player.currentLocation, poly)) {
-                if (player.stormsInside.length > 0) {
-                    player.stormsInside.forEach(stormInside => {
-                        if (turf.booleanEqual(storm, stormInside[0])) {
-                            if (stormInside[1] - time >= scoreTiming) {
-                                player.currentScore += tornWarnScore
-                                player.totalScore += tornWarnScore
-                                stormInside[1] = time 
-                            }
-                        }
-                    });
-                }
-                else {
-                    player.stormsInside.push([storm, time])
-                    player.currentScore += tornWarnScore
-                    player.totalScore += tornWarnScore
-                }
-            }
-        });
-    }
-    if(tornadoWatch.length > 0) {
-        tornadoWatch.forEach(storm => {
-            var poly = turf.polygon(storm)
-            if (turf.booleanPointInPolygon(player.currentLocation, poly)) {
-                if (player.stormsInside.length > 0) {
-                    player.stormsInside.forEach(stormInside => {
-                        if (turf.booleanEqual(storm, stormInside[0])) {
-                            if (stormInside[1] - time >= scoreTiming) {
-                                player.currentScore += tornWatchScore
-                                player.totalScore += tornWatchScore
-                                stormInside[1] = time 
-                            }
-                        }
-                    });
-                }
-                else {
-                    player.stormsInside.push([storm, time])
-                    player.currentScore += tornWatchScore
-                    player.totalScore += tornWatchScore
-                }
-            }
-        });
-    }
+    scorePolyStorm(tornadoWarn, tornWarnScore)
+    scorePolyStorm(tornadoWatch, tornWatchScore)
+    scorePolyStorm(tStormWarn, tsWarnScore)
+    scorePolyStorm(tStormWatch, tsWatchScore)
 
-    if (tStormWarn.length > 0) {
-        tStormWarn.forEach(storm => {
-            var poly = turf.polygon(storm)
-            if (turf.booleanPointInPolygon(player.currentLocation, poly)) {
-                if (player.stormsInside.length > 0) {
-                    player.stormsInside.forEach(stormInside => {
-                        if (turf.booleanEqual(storm, stormInside[0])) {
-                            if (stormInside[1] - time >= scoreTiming) {
-                                player.currentScore += tsWarnScore
-                                player.totalScore += tsWarnScore
-                                stormInside[1] = time 
-                            }
-                        }
-                    });
-                }
-                else {
-                    player.stormsInside.push([storm, time])
-                    player.currentScore += tsWarnScore
-                    player.totalScore += tsWarnScore
-                }
-            }
-        });
-    }
+    scorePointStorm(tornado, torn1, torn5)
+    scorePointStorm(wind, wind1, wind5)
+    scorePointStorm(hail, hailsmall1, hailsmall5, isHail = true)
 
-    if (tStormWatch.length > 0) {
-        tStormWatch.forEach(storm => {
-            var poly = turf.polygon(storm)
-            if (turf.booleanPointInPolygon(player.currentLocation, poly)) {
-                if (player.stormsInside.length > 0) {
-                    player.stormsInside.forEach(stormInside => {
-                        if (turf.booleanEqual(storm, stormInside[0])) {
-                            if (stormInside[1] - time >= scoreTiming) {
-                                player.currentScore += tsWatchScore
-                                player.totalScore += tsWatchScore
-                                stormInside[1] = time 
-                            }
-                        }
-                    });
-                }
-                else {
-                    player.stormsInside.push([storm, time])
-                    player.currentScore += tsWatchScore
-                    player.totalScore += tsWatchScore
-                }
-            }
-        });
-    }
+    function scorePolyStorm(storms, scoring) {
 
-    if (wind.length > 0 ) { 
-        wind.forEach(storm => {
-            var point = turf.point(storm.coordinates)
-            var found = false
-            if (player.pointNearChecked.length > 0) {
-                for (var i = 0; i < player.pointNearChecked.length; i++) {
-                    if (turf.booleanEqual(pointChecked, point)) {
-                        found = true
-                        break
+        if(storms.length > 0) {
+            storms.forEach(storm => {
+                var poly = turf.polygon(storm)
+                if (turf.booleanPointInPolygon(player.currentLocation, poly)) {
+                    if (player.stormsInside.length > 0) {
+                        player.stormsInside.forEach(stormInside => {
+                            if (turf.booleanEqual(storm, stormInside[0])) {
+                                if (stormInside[1] - time >= scoreTiming) {
+                                    player.currentScore += Math.round(scoring * player.scoreMultiplyer)
+                                    player.totalScore += Math.round(scoring * player.scoreMultiplyer)
+                                    stormInside[1] = time 
+                                }
+                            }
+                        });
+                    }
+                    else {
+                        player.stormsInside.push([storm, time])
+                        player.currentScore += Math.round(scoring * player.scoreMultiplyer)
+                        player.totalScore += Math.round(scoring * player.scoreMultiplyer)
                     }
                 }
-                if (!found) {
-                    var dist = turf.distance(player.currentLocation, point, units = 'miles')
-                    if (dist > 1 && dist <= 5) {
-                        player.currentScore += wind5
-                        player.totalScore += wind5
+            });
+        }
+    }
+
+    function scorePointStorm(storms, scoreone, scorefive, isHail = false) {
+        if (storms.length > 0 ) { 
+            storms.forEach(storm => {
+                var point = turf.point(storm.coordinates)
+                var found = false
+                if (player.pointNearChecked.length > 0) {
+                    for (var i = 0; i < player.pointNearChecked.length; i++) {
+                        if (turf.booleanEqual(pointChecked, point)) {
+                            found = true
+                            break
+                        }
                     }
-                    else if (dist < 1) {
-                        player.currentScore += wind1
-                        player.totalScore += wind1
+                    if (!found) {
+                        var dist = turf.distance(player.currentLocation, point, units = 'miles')
+                        if (dist > 1 && dist <= 5) {
+                            if (isHail) {
+                                if (storm.size == null || storm.size < 100) {
+                                    player.currentScore += Math.round(hailsmall5 * player.scoreMultiplyer)
+                                    player.totalScore += Math.round(hailsmall5 * player.scoreMultiplyer)
+                                }
+                                else if (storm.size >= 100 && storm.size < 200) {
+                                    player.currentScore += Math.round(hail1inch5 * player.scoreMultiplyer)
+                                    player.totalScore += Math.round(hail1inch5 * player.scoreMultiplyer)
+                                }
+                                else if (storm.size >= 200 && storm.size < 300) {
+                                    player.currentScore += Math.round(hail2inch5 * player.scoreMultiplyer)
+                                    player.totalScore += Math.round(hail2inch5 * player.scoreMultiplyer)
+                                }
+                                else if (storm.size >= 300) {
+                                    player.currentScore += Math.round(hail3inch5 * player.scoreMultiplyer)
+                                    player.totalScore += Math.round(hail3inch5 * player.scoreMultiplyer)
+                                }
+                            } else {
+                                player.currentScore += Math.round(scorefive * player.scoreMultiplyer)
+                                player.totalScore += Math.round(scorefive * player.scoreMultiplyer)
+                            }
+                        }
+                        else if (dist < 1) {
+                            if (isHail) {
+                                if (storm.size == null || storm.size < 100) {
+                                    player.currentScore += Math.round(hailsmall1 * player.scoreMultiplyer)
+                                    player.totalScore += Math.round(hailsmall1 * player.scoreMultiplyer)
+                                }
+                                else if (storm.size >= 100 && storm.size < 200) {
+                                    player.currentScore += Math.round(hail1inch1 * player.scoreMultiplyer)
+                                    player.totalScore += Math.round(hail1inch1 * player.scoreMultiplyer)
+                                }
+                                else if (storm.size >= 200 && storm.size < 300) {
+                                    player.currentScore += Math.round(hail2inch1 * player.scoreMultiplyer)
+                                    player.totalScore += Math.round(hail2inch1 * player.scoreMultiplyer)
+                                }
+                                else if (storm.size >= 300) {
+                                    player.currentScore += Math.round(hail3inch1 * player.scoreMultiplyer)
+                                    player.totalScore += Math.round(hail3inch1 * player.scoreMultiplyer)
+                                }
+                            }
+                            else {
+                                player.currentScore += Math.round(scoreone * player.scoreMultiplyer)
+                                player.totalScore += Math.round(scoreone * player.scoreMultiplyer)
+                            }
+                        }
+                        player.pointNearChecked.push(point)
                     }
-                    player.pointNearChecked.push(point)
                 }
-            }
-        });
-    }
-
-    if (tornado.length > 0) {
-        tornado.forEach(storm => {
-        
-        });
-    }
-
-    if (hail.length > 0) {
-        hail.forEach(storm => {
-        
-        });
+            });
+        }
     }
 }
+
+
 
 // create a timer that checks the time every 5 minutes and grabs updated weather while in active game time
 function startGameTimer() {
