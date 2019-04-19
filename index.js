@@ -95,15 +95,19 @@ io.on('connection', (socket) => {
         var canLogin = true
         var success = false
 
-        // check if player is logged in already
-        for (var i = 0; i < loggedinPlayers.length(); i++) {
-            var player = loggedinPlayers[i]
-            if (player.name == username) {
-                socket.emit("login failed", "Username is already logged in.")
-                canLogin = false
-                break
-            }
-        }
+
+        // commented out as player info will be stored app side for now
+        // so a unique username is not required or guaranteed
+
+        // // check if player is logged in already
+        // for (var i = 0; i < loggedinPlayers.length(); i++) {
+        //     var player = loggedinPlayers[i]
+        //     if (player.name == username) {
+        //         socket.emit("login failed", "Username is already logged in.")
+        //         canLogin = false
+        //         break
+        //     }
+        // }
 
         // if not in loggedin list, check if player was previously loggedin and in active list
         if (canLogin) {
