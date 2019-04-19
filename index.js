@@ -71,7 +71,7 @@ var activeGameTime = true
 const dayBegin = 10
 const dayEnd = 23
 
-startGameTimer()
+// startGameTimer()
 
 //start gameplay, should run until end of day
 gameLoop()
@@ -216,6 +216,7 @@ io.on('connection', (socket) => {
         socket.player.speed = speed
         socket.player.startTime = new Date().getTime()
         socket.player.isTraveling = true
+        socket.player.duration = duration
         console.log(socket.player.name + " traveling from " + socket.player.currentLocation.geometry.coordinates + " to " + socket.player.destination.geometry.coordinates + " for " + duration/60 + " minutes")
     })
 
@@ -224,9 +225,15 @@ io.on('connection', (socket) => {
     })
 
     socket.on('getPlayerUpdate', () => {
+        var start = socket.player.startTime
+        var now = new Date().getTime()
+
+        var timeleft = socket.player.duration - ((now - start) / 1000)
+        
         socket.emit('updatePlayer', {
             currentLocation: socket.player.currentLocation.geometry.coordinates,
-            currentScore: socket.player.currentScore
+            currentScore: socket.player.currentScore,
+            timeLeft: timeleft
         })
     })
 
@@ -286,7 +293,7 @@ function travel(player) {
 
     player.currentLocation = turf.along(player.route, distance)
 
-    // console.log(player.name + " now at " + player.currentLocation.geometry.coordinates)
+    console.log(player.name + " now at " + player.currentLocation.geometry.coordinates)
 
     if (turf.booleanEqual(player.currentLocation, player.destination)) {
         player.isTraveling = false
@@ -299,11 +306,11 @@ function checkScoring(player) {
 
     var time = new Date().getTime()
 
-    if(tornadoWarn.length() > 0) {
+    if(tornadoWarn.length > 0) {
         tornadoWarn.forEach(storm => {
             var poly = turf.polygon(storm)
             if (turf.booleanPointInPolygon(player.currentLocation, poly)) {
-                if (player.stormsInside.length() > 0) {
+                if (player.stormsInside.length > 0) {
                     player.stormsInside.forEach(stormInside => {
                         if (turf.booleanEqual(storm, stormInside[0])) {
                             if (stormInside[1] - time >= scoreTiming) {
@@ -322,11 +329,11 @@ function checkScoring(player) {
             }
         });
     }
-    if(tornadoWatch.length() > 0) {
+    if(tornadoWatch.length > 0) {
         tornadoWatch.forEach(storm => {
             var poly = turf.polygon(storm)
             if (turf.booleanPointInPolygon(player.currentLocation, poly)) {
-                if (player.stormsInside.length() > 0) {
+                if (player.stormsInside.length > 0) {
                     player.stormsInside.forEach(stormInside => {
                         if (turf.booleanEqual(storm, stormInside[0])) {
                             if (stormInside[1] - time >= scoreTiming) {
@@ -346,11 +353,11 @@ function checkScoring(player) {
         });
     }
 
-    if (tStormWarn.length() > 0) {
+    if (tStormWarn.length > 0) {
         tStormWarn.forEach(storm => {
             var poly = turf.polygon(storm)
             if (turf.booleanPointInPolygon(player.currentLocation, poly)) {
-                if (player.stormsInside.length() > 0) {
+                if (player.stormsInside.length > 0) {
                     player.stormsInside.forEach(stormInside => {
                         if (turf.booleanEqual(storm, stormInside[0])) {
                             if (stormInside[1] - time >= scoreTiming) {
@@ -370,11 +377,11 @@ function checkScoring(player) {
         });
     }
 
-    if (tStormWatch.length() > 0) {
+    if (tStormWatch.length > 0) {
         tStormWatch.forEach(storm => {
             var poly = turf.polygon(storm)
             if (turf.booleanPointInPolygon(player.currentLocation, poly)) {
-                if (player.stormsInside.length() > 0) {
+                if (player.stormsInside.length > 0) {
                     player.stormsInside.forEach(stormInside => {
                         if (turf.booleanEqual(storm, stormInside[0])) {
                             if (stormInside[1] - time >= scoreTiming) {
@@ -394,12 +401,12 @@ function checkScoring(player) {
         });
     }
 
-    if (wind.length() > 0 ) { 
+    if (wind.length > 0 ) { 
         wind.forEach(storm => {
-            var point = turf.point(storm[1])
+            var point = turf.point(storm.coordinates)
             var found = false
-            if (player.pointNearChecked.length() > 0) {
-                for (var i = 0; i < player.pointNearChecked.length(); i++) {
+            if (player.pointNearChecked.length > 0) {
+                for (var i = 0; i < player.pointNearChecked.length; i++) {
                     if (turf.booleanEqual(pointChecked, point)) {
                         found = true
                         break
@@ -421,13 +428,13 @@ function checkScoring(player) {
         });
     }
 
-    if (tornado.length() > 0) {
+    if (tornado.length > 0) {
         tornado.forEach(storm => {
         
         });
     }
 
-    if (hail.length() > 0) {
+    if (hail.length > 0) {
         hail.forEach(storm => {
         
         });
