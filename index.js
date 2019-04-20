@@ -19,6 +19,9 @@ var storms = weather.parse()
 
 // 5 minutes
 const scoreTiming = 5000 * 60
+// how many minutes between getting weather updates
+const weatherTiming = 5
+
 const tornWarnScore = 20
 const tornWatchScore = 15
 const tsWarnScore = 10
@@ -26,7 +29,7 @@ const tsWatchScore = 5
 const wind1 = 5
 const wind5 = 2
 const torn1 = 50
-const torn5 = 10
+const torn5 = 25
 const hailsmall1 = 5
 const hailsmall5 = 2
 const hail1inch1 = 10
@@ -80,7 +83,7 @@ io.on('connection', (socket) => {
 
 
     socket.player = new Player(socket = socket, name = "Player" + loggedinPlayers.length.toString(),
-        currentScore = 0, totalScore = 0, scoreMultiplyer = 1, isTraveling = false, currentLocation = turf.point([-85.386521, 40.193382]))
+        currentScore = 0, totalScore = 0, scoreMultiplyer = 1, isTraveling = false, currentLocation = turf.point([-77.909999999999997, 40.100000000000001]))
 
     activePlayers.push(socket.player)
     loggedinPlayers.push(socket.player)
@@ -121,10 +124,10 @@ io.on('connection', (socket) => {
                     success = true
 
                     if (activeGameTime) {
-                        socket.emit("login success prev logged in", player.currentScore, player.totalScore, player.currentLocation)
+                        socket.emit("login success prev logged in", player.currentScore, player.totalScore, player.currentLocation, player.route)
                     }
                     else {
-                        socket.emit("end of day", player.currentScore, player.totalScore, player.currentLocation)
+                        socket.emit("endOfDay")
                     }
                     break
                 }
@@ -149,10 +152,8 @@ io.on('connection', (socket) => {
                 socket.emit("login success", player.currentScore, player.totalScore, player.currentLocation)
             }
             else {
-                socket.emit("end of day", player.currentScore, player.totalScore, player.currentLocation)
+                socket.emit("endOfDay")
             }
-            break
-
         }
 
         // player is not in active list
@@ -262,17 +263,20 @@ io.on('connection', (socket) => {
 
     socket.on('stopTravel', () => {
         socket.player.isTraveling = false
+        console.log(socket.player.name + " stopping travel at " + socket.player.currentLocation.geometry.coordinates)
     })
 
     socket.on('getPlayerUpdate', () => {
         var start = socket.player.startTime
         var now = new Date().getTime()
-
-        var timeleft = socket.player.duration - ((now - start) / 1000)
-
+        var timeleft = 0
+        if (socket.player.isTraveling) {
+            timeleft = socket.player.duration - ((now - start) / 1000)
+        }
         socket.emit('updatePlayer', {
             currentLocation: socket.player.currentLocation.geometry.coordinates,
             currentScore: socket.player.currentScore,
+            totalScore: socket.player.totalScore,
             timeLeft: timeleft
         })
     })
@@ -291,12 +295,13 @@ function Player(socket, name, currentScore, totalScore, scoreMultiplyer, isTrave
     this.currentScore = currentScore;
     this.totalScore = totalScore;
     this.isTraveling = isTraveling;
-    this.isLoggedIn = true
+    this.inStorm = false;
+    this.isLoggedIn = true;
     this.currentLocation = currentLocation;
     this.destination = destination;
     this.route = route;
     this.scoreMultiplyer = scoreMultiplyer
-    this.stormsInside = []
+    this.stormInside = null;
     this.pointNearChecked = []
 }
 
@@ -338,7 +343,9 @@ function travel(player) {
 
     if (turf.booleanEqual(player.currentLocation, player.destination)) {
         player.isTraveling = false
-        player.socket.emit("destination reached", player.currentLocation)
+        player.socket.emit("destinationReached", {
+            currentLocation: player.currentLocation.geometry.coordinates
+        })
         console.log(player.name + " reached destination in " + ((((new Date().getTime()) - player.startTime) / 1000) / 60) + " minutes.")
     }
 }
@@ -347,6 +354,7 @@ function travel(player) {
 function checkScoring(player) {
 
     var time = new Date().getTime()
+    player.inStorm = false
 
     scorePolyStorm(tornadoWarn, tornWarnScore)
     scorePolyStorm(tornadoWatch, tornWatchScore)
@@ -359,23 +367,23 @@ function checkScoring(player) {
 
     function scorePolyStorm(storms, scoring) {
 
-        if (storms.length > 0) {
+        if ( !player.inStorm && storms.length > 0) {
             storms.forEach(storm => {
                 var poly = turf.polygon(storm)
                 if (turf.booleanPointInPolygon(player.currentLocation, poly)) {
-                    if (player.stormsInside.length > 0) {
-                        player.stormsInside.forEach(stormInside => {
-                            if (turf.booleanEqual(storm, stormInside[0])) {
-                                if (stormInside[1] - time >= scoreTiming) {
-                                    player.currentScore += Math.round(scoring * player.scoreMultiplyer)
-                                    player.totalScore += Math.round(scoring * player.scoreMultiplyer)
-                                    stormInside[1] = time
-                                }
+                    if (player.stormsInside != null) {
+                        if (turf.booleanEqual(poly, player.stormInside[0])) {
+                            if (time - stormInside[1] >= scoreTiming) {
+                                player.currentScore += Math.round(scoring * player.scoreMultiplyer)
+                                player.totalScore += Math.round(scoring * player.scoreMultiplyer)
+                                player.stormInside[1] = time
+                                player.inStorm = true
                             }
-                        });
+                        } 
                     }
                     else {
-                        player.stormsInside.push([storm, time])
+                        player.stormsInside = [poly, time]
+                        player.inStorm = true
                         player.currentScore += Math.round(scoring * player.scoreMultiplyer)
                         player.totalScore += Math.round(scoring * player.scoreMultiplyer)
                     }
@@ -470,21 +478,22 @@ function startGameTimer() {
         checkGameTime(d)
 
         if (activeGameTime) {
-            // update weather every 5 minutes
-            if (d.getMinutes() % 5 == 0) {
+            // update weather every X minutes
+            if (d.getMinutes() % weatherTiming == 0) {
                 console.log("updating weather...")
                 storms = weather.parse()
                 // wait 5 seconds to push weather to players since I can't figure out await/promise
                 setTimeout(() => {
                     console.log(storms)
                     fillStormArrays()
+                    // send weather update to all players currently logged in
                     io.in("loggedin").emit("weatherUpdate", storms)
 
                 }, 5000)
             }
         }
         else {
-            // run end of day
+            io.in("loggedin").emit("endOfDay")
         }
         clearInterval(intervalId)
         d = new Date()
