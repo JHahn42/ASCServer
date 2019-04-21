@@ -290,7 +290,7 @@ io.on('connection', (socket) => {
 // Gameplay
 
 function Player(socket, name, currentScore, totalScore, scoreMultiplyer, isTraveling, currentLocation, destination, route) {
-    this.socket = socket
+    this.socket = socket;
     this.name = name;
     this.currentScore = currentScore;
     this.totalScore = totalScore;
@@ -300,9 +300,9 @@ function Player(socket, name, currentScore, totalScore, scoreMultiplyer, isTrave
     this.currentLocation = currentLocation;
     this.destination = destination;
     this.route = route;
-    this.scoreMultiplyer = scoreMultiplyer
-    this.stormInside = null;
-    this.pointNearChecked = []
+    this.scoreMultiplyer = scoreMultiplyer;
+    this.stormInside = [];
+    this.pointNearChecked = [];
 }
 
 function gameLoop(player) {
@@ -355,40 +355,69 @@ function checkScoring(player) {
 
     var time = new Date().getTime()
     player.inStorm = false
-
+    // call scoring from highest points value to lowest 
+    // as player should only get score from one storm poly at a time
     scorePolyStorm(tornadoWarn, tornWarnScore)
     scorePolyStorm(tornadoWatch, tornWatchScore)
     scorePolyStorm(tStormWarn, tsWarnScore)
     scorePolyStorm(tStormWatch, tsWatchScore)
 
     scorePointStorm(tornado, torn1, torn5)
-    scorePointStorm(wind, wind1, wind5)
     scorePointStorm(hail, hailsmall1, hailsmall5, isHail = true)
+    scorePointStorm(wind, wind1, wind5)
+    
 
     function scorePolyStorm(storms, scoring) {
-
+        // only check score if player isn't already confirmed in polygon during this check
         if ( !player.inStorm && storms.length > 0) {
-            storms.forEach(storm => {
-                var poly = turf.polygon(storm)
+            // check every storm in this list
+            for (var i = 0; i < storms.length; i++) {
+                var poly = turf.polygon(storms[i])
+                // if player is inside current storm
                 if (turf.booleanPointInPolygon(player.currentLocation, poly)) {
-                    if (player.stormsInside != null) {
-                        if (turf.booleanEqual(poly, player.stormInside[0])) {
-                            if (time - stormInside[1] >= scoreTiming) {
-                                player.currentScore += Math.round(scoring * player.scoreMultiplyer)
-                                player.totalScore += Math.round(scoring * player.scoreMultiplyer)
-                                player.stormInside[1] = time
-                                player.inStorm = true
-                            }
-                        } 
+                    // check if storm has been stored in player's stormsInside
+                    if (player.stormsInside.length > 0) {
+                        for(var ind = 0; ind < player.stormsInside.length; ind++) {
+                            // if the storm was found stored in stormsInside
+                            if (turf.booleanEqual(poly, player.stormsInside[ind][0])) {
+                                // if it has been over X minutes since last recieving points for this storm, reset timer and award points
+                                if (time - player.stormsInside[ind][1] >= scoreTiming) {
+                                    player.currentScore += Math.round(scoring * player.scoreMultiplyer)
+                                    player.totalScore += Math.round(scoring * player.scoreMultiplyer)
+                                    player.stormsInside[ind][1] = time
+                                    player.inStorm = true
+                                    break
+                                }
+                                // if time hasn't been met, lock player out from recieving points from lower point storms that may overlap
+                                else {
+                                    player.inStorm = true
+                                    break
+                                }
+                            } 
+                        }  
+                        // if storm was not stored in stormsInside, award points and store into stormsInside
+                        if (!player.inStorm) {
+                            player.stormsInside.push([poly, time])
+                            player.inStorm = true
+                            player.currentScore += Math.round(scoring * player.scoreMultiplyer)
+                            player.totalScore += Math.round(scoring * player.scoreMultiplyer)
+                            break
+                        }
+                        // else, storm was found and no more storms need to be checked
+                        else {
+                            break
+                        }
                     }
+                    // if stormsInside is empty, award points and store into stormsInside
                     else {
-                        player.stormsInside = [poly, time]
+                        player.stormsInside.push([poly, time])
                         player.inStorm = true
                         player.currentScore += Math.round(scoring * player.scoreMultiplyer)
                         player.totalScore += Math.round(scoring * player.scoreMultiplyer)
+                        break
                     }
                 }
-            });
+            }
         }
     }
 

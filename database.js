@@ -14,10 +14,7 @@ var pool = mysql.createPool({
 
 });
 
-
-// need to update to pool
 module.exports = {
-    // should be able to tell between password incorrect and username not found
     login: (username, password, callback) => {
 
         pool.getConnection((err, connection) => {
@@ -40,7 +37,6 @@ module.exports = {
 
     },
 
-    // should check if username is taken
     newUser: (username, password) => {
         pool.getConnection((err, connection) => {
             if(err) {
