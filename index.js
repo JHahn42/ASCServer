@@ -98,7 +98,6 @@ io.on('connection', (socket) => {
         var canLogin = true
         var success = false
 
-
         // commented out as player info will be stored app side for now
         // so a unique username is not required or guaranteed
 
@@ -124,7 +123,7 @@ io.on('connection', (socket) => {
                     success = true
 
                     if (activeGameTime) {
-                        socket.emit("login success prev logged in", player.currentScore, player.totalScore, player.currentLocation, player.route)
+                        socket.emit("logginFromPrevious", player.currentScore, player.totalScore, player.currentLocation, player.route)
                     }
                     else {
                         socket.emit("endOfDay")
@@ -149,7 +148,7 @@ io.on('connection', (socket) => {
             socket.join("loggedin")
 
             if (activeGameTime) {
-                socket.emit("login success", player.currentScore, player.totalScore, player.currentLocation)
+                socket.emit("loginSuccess", player.currentScore, player.totalScore, player.currentLocation)
             }
             else {
                 socket.emit("endOfDay")
@@ -282,7 +281,14 @@ io.on('connection', (socket) => {
     })
 
     socket.on("getWeatherUpdate", () => {
-        socket.emit("weatherUpdate", storms)
+        var now = new Date()
+        // delay sending weather data if it is still getting parsed
+        if (now.getMinutes() % weatherTiming == 0 && now.getSeconds() < 5) {
+            setTimeout(() => { socket.emit("weatherUpdate", storms) }, 5000)
+        }
+        else {
+            socket.emit("weatherUpdate", storms)
+        } 
     })
 
 });
@@ -514,10 +520,11 @@ function startGameTimer() {
                 // wait 5 seconds to push weather to players since I can't figure out await/promise
                 setTimeout(() => {
                     console.log(storms)
-                    fillStormArrays()
-                    // send weather update to all players currently logged in
-                    io.in("loggedin").emit("weatherUpdate", storms)
-
+                    if(stormsHaveChanged()) {
+                        fillStormArrays()
+                         // send weather update to all players currently logged in
+                        io.in("loggedin").emit("weatherUpdate", storms)
+                    }  
                 }, 5000)
             }
         }
@@ -552,4 +559,57 @@ function fillStormArrays() {
     wind = storms.storms[4].instances
     tornado = storms.storms[5].instances
     hail = storms.storms[6].instances
+}
+
+function stormsHaveChanged() {
+    if (tornadoWarn.length == storms.storms[0].instances.length) {
+        for (var i = 0; i < tornadoWarn.length; i++) {
+            if (!turf.booleanEqual(turf.polygon(tornadoWarn[i]), turf.polygon(storms.storms[0].instances[i]))) {
+                return true
+            }
+        }
+    }
+    else {
+        return true
+    }
+    if (tornadoWatch.length == storms.storms[1].instances.length) {
+        for (var i = 0; i < tornadoWatch.length; i++) {
+            if (!turf.booleanEqual(turf.polygon(tornadoWatch[i]), turf.polygon(storms.storms[1].instances[i]))) {
+                return true
+            }
+        }
+    }
+    else {
+        return true
+    }
+    if (tStormWarn.length == storms.storms[2].instances.length) {
+        for (var i = 0; i < tStormWarn.length; i++) {
+            if (!turf.booleanEqual(turf.polygon(tStormWarn[i]), turf.polygon(storms.storms[2].instances[i]))) {
+                return true
+            }
+        }
+    }
+    else {
+        return true
+    }
+    if (tStormWatch.length == storms.storms[3].instances.length) {
+        for (var i = 0; i < tStormWatch.length; i++) {
+            if (!turf.booleanEqual(turf.polygon(tStormWatch[i]), turf.polygon(storms.storms[3].instances[i]))) {
+                return true
+            }
+        }
+    }
+    else {
+        return true
+    }
+    if (wind.length != storms.storms[4].instances.length) {
+        return true
+    }
+    if (tornado.length != storms.storms[5].instances.length) {
+        return true
+    }
+    if (hail.length != storms.storms[6].instances.length) {
+        return true
+    }
+    return false
 }
