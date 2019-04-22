@@ -314,7 +314,7 @@ function Player(socket, name, currentScore, totalScore, scoreMultiplyer, isTrave
     this.pointNearChecked = [];
 }
 
-function gameLoop(player) {
+function gameLoop() {
     // only start gameplay loop if during game hours
     if (activeGameTime) {
 
@@ -560,7 +560,7 @@ function checkGameTime(d) {
             gameLoop()   
         }
     } else {
-        // activeGameTime = false
+        activeGameTime = false
     }
 }
 
