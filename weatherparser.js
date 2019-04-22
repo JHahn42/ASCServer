@@ -3,6 +3,8 @@ var request = require('request');
 var fs = require('fs');
 var papa = require('papaparse')
 var url = 'https://api.weather.gov/alerts/active';
+var turf = require('@turf/turf')
+
 module.exports = {
     parse: () => {
         // json object to hold all weather data
@@ -36,16 +38,16 @@ module.exports = {
 
                         if (data.features[i].geometry != null) {
                             if (data.features[i].properties.event == 'Tornado Warning') {  
-                                tornadoWarn.push(data.features[i].geometry.coordinates)
+                                tornadoWarn.push(turf.polygon(data.features[i].geometry.coordinates))
                             }
                             else if (data.features[i].properties.event == 'Tornado Watch') {
-                                tornadoWatch.push(data.features[i].geometry.coordinates)
+                                tornadoWatch.push(turf.polygon(data.features[i].geometry.coordinates))
                             }
                             else if (data.features[i].properties.event == 'Severe Thunderstorm Warning') {
-                                tStormWarn.push(data.features[i].geometry.coordinates)
+                                tStormWarn.push(turf.polygon(data.features[i].geometry.coordinates))
                             }
                             else if (data.features[i].properties.event == 'Severe Thunderstorm Watch') {
-                                tStormWatch.push(data.features[i].geometry.coordinates)
+                                tStormWatch.push(turf.polygon(data.features[i].geometry.coordinates))
                             }
                         }
                     }
@@ -66,13 +68,13 @@ module.exports = {
         const hailUrl ='https://www.spc.noaa.gov/climo/reports/today_hail.csv';
 
         // replace with today's wind url
-        papa.parse("https://www.spc.noaa.gov/climo/reports/180808_rpts_wind.csv", {
+        papa.parse(windUrl, {
             download: true,
             header: true,
             step: function(row) {
                 var obj = row.data[0]
                 if (obj.Time != "") {
-                    wind.push({"time": obj.Time, "coordinates": [obj.Lat, obj.Lon]})
+                    wind.push({ "time": obj.Time, "coordinates": turf.point([obj.Lon, obj.Lat]) })
                 }
             },
             complete: function() {
@@ -81,13 +83,13 @@ module.exports = {
         });
 
         // replace with today's tornado url
-        papa.parse("https://www.spc.noaa.gov/climo/reports/180808_rpts_torn.csv", {
+        papa.parse(tornadoUrl, {
             download: true,
             header: true,
             step: function(row) {
                 var obj = row.data[0]
                 if (obj.Time != "") {
-                    tornado.push({"time": obj.Time, "coordinates": [obj.Lat, obj.Lon]})
+                    tornado.push({ "time": obj.Time, "coordinates": turf.point([obj.Lon, obj.Lat]) })
                 }
             },
             complete: function() {
@@ -96,13 +98,13 @@ module.exports = {
         });
         
         // replace with today's tornado url
-        papa.parse("https://www.spc.noaa.gov/climo/reports/180808_rpts_hail.csv", {
+        papa.parse(hailUrl, {
             download: true,
             header: true,
             step: function(row) {
                 var obj = row.data[0]
                 if (obj.Time != "") {
-                    hail.push({"time": obj.Time, "size": obj.Size, "coordinates": [obj.Lat, obj.Lon]})
+                    hail.push({ "time": obj.Time, "size": obj.Size, "coordinates": turf.point([obj.Lon, obj.Lat]) })
                 }
             },
             complete: function() {
