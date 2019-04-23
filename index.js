@@ -85,7 +85,7 @@ io.on('connection', (socket) => {
     socket.player = new Player(socket = socket, name = "Player" + loggedinPlayers.length.toString(),
         currentScore = 0, totalScore = 0, scoreMultiplyer = 1, isTraveling = false, currentLocation = null)
 
-    // activePlayers.push(socket.player)
+    // // activePlayers.push(socket.player)
     loggedinPlayers.push(socket.player)
     socket.join("loggedin")
 
@@ -94,7 +94,7 @@ io.on('connection', (socket) => {
     // attempts to login, checking with the database. Result sent to App through string message. 
     // If successful, username is tied to socketid and added to active player list.
     // may need to change array to dictionary instead, will have to make custom
-    socket.on('login', (username, cLocation, cScore, tScore, sMultiplyer) => {
+    socket.on('login', (username, password, clong, clat, cScore, tScore, sMultiplyer) => {
 
         var canLogin = true
         var success = false
@@ -116,14 +116,14 @@ io.on('connection', (socket) => {
         if (canLogin) {
             for (var i = 0; i < activePlayers.length(); i++) {
                 var player = activePlayers[i]
-                if (player.name == username) {
+                if (player.name == username && player.password == password) {
 
                     loggedinPlayers.push(player)
                     socket.join("loggedin")
                     player.isLoggedIn = true
                     player.socket = socket
                     success = true
-
+                    console.log(player.name + " relogged in")
                     if (activeGameTime) {
                         socket.emit("logginFromPrevious", player.currentScore, player.totalScore, player.currentLocation, player.route)
                     }
@@ -136,19 +136,21 @@ io.on('connection', (socket) => {
         }
 
         if (canLogin && !success) {
-            socket.player = new Player(socket = socket,
-                                        name = username,
-                                        currentScore = cScore,
-                                        totalScore = tScore,
-                                        scoreMultiplyer = sMultiplyer,
-                                        isTraveling = false,
-                                        currentLocation = cLocation,
-                                        destination = null,
-                                        route = null)
+            socket.player = new Player(socket= socket,
+                                        name= username,
+                                        pass= password,
+                                        currentScore= cScore,
+                                        totalScore= tScore,
+                                        scoreMultiplyer= sMultiplyer,
+                                        isTraveling= false,
+                                        currentLocation= turf.point([parseFloat(clong), parseFloat(clat)]),
+                                        destination= null,
+                                        route= null)
 
             loggedinPlayers.push(socket.player)
             socket.join("loggedin")
             socket.player.isLoggedIn = true
+            console.log(player.name + " has logged in.")
 
             if (activeGameTime) {
                 socket.emit("loginSuccess", player.currentScore, player.totalScore, player.currentLocation)
@@ -303,9 +305,10 @@ io.on('connection', (socket) => {
 
 // Gameplay
 
-function Player(socket, name, currentScore, totalScore, scoreMultiplyer, isTraveling, currentLocation, destination, route) {
+function Player(socket, name, password, currentScore, totalScore, scoreMultiplyer, isTraveling, currentLocation, destination, route) {
     this.socket = socket;
     this.name = name;
+    this.pass = password
     this.currentScore = currentScore;
     this.totalScore = totalScore;
     this.isTraveling = isTraveling;
@@ -452,14 +455,14 @@ function checkScoring(player) {
                 var found = false
                 if (player.pointNearChecked.length > 0) {
                     for (var i = 0; i < player.pointNearChecked.length; i++) {
-                        if (turf.booleanEqual(pointChecked, storm.coordinates)) {
+                        if (turf.booleanEqual(player.pointNearChecked[i], storm.coordinates)) {
                             found = true
                             break
                         }
                     }
                 }
                 if (!found) {
-                    var dist = turf.distance(player.currentLocation, storm.coordinates, units = 'miles')
+                    var dist = turf.distance(player.currentLocation, storm.coordinates, { units: 'miles' })
                     if (dist > 1 && dist <= 5) {
                         if (isHail) {
                             if (storm.size == null || storm.size < 100) {
@@ -514,8 +517,6 @@ function checkScoring(player) {
     }
 }
 
-
-
 // create a timer that checks the time every 5 minutes and grabs updated weather while in active game time
 function startGameTimer() {
 
@@ -567,7 +568,7 @@ function checkGameTime(d) {
             gameLoop()   
         }
     } else {
-        activeGameTime = false
+       // activeGameTime = false
     }
 }
 
