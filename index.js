@@ -568,7 +568,7 @@ function checkGameTime(d) {
             gameLoop()   
         }
     } else {
-       // activeGameTime = false
+        activeGameTime = false
     }
 }
 
