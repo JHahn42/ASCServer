@@ -50,7 +50,7 @@ setTimeout(() => { fillStormArrays(); console.log(storms) }, 5000)
 
 
 //start up server listening on chosen port
-const port = 3000
+const port = 8080
 
 app.get('/', (req, res) => {
     res.send('Server is running on port ' + port)
