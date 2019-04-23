@@ -50,7 +50,7 @@ setTimeout(() => { fillStormArrays(); console.log(storms) }, 5000)
 
 
 //start up server listening on chosen port
-const port = 8080
+const port = (process.env.PORT || 3000)
 
 app.get('/', (req, res) => {
     res.send('Server is running on port ' + port)
@@ -87,6 +87,7 @@ io.on('connection', (socket) => {
 
     // activePlayers.push(socket.player)
     loggedinPlayers.push(socket.player)
+    socket.join("loggedin")
 
     console.log(socket.player.name + " connected")
 
@@ -119,6 +120,7 @@ io.on('connection', (socket) => {
 
                     loggedinPlayers.push(player)
                     socket.join("loggedin")
+                    player.isLoggedIn = true
                     player.socket = socket
                     success = true
 
@@ -146,6 +148,7 @@ io.on('connection', (socket) => {
 
             loggedinPlayers.push(socket.player)
             socket.join("loggedin")
+            socket.player.isLoggedIn = true
 
             if (activeGameTime) {
                 socket.emit("loginSuccess", player.currentScore, player.totalScore, player.currentLocation)
@@ -220,6 +223,7 @@ io.on('connection', (socket) => {
     socket.on('logoff', () => {
         loggedinPlayers.splice(loggedinPlayers.indexOf(socket.Player), 1)
         socket.leave("loggedin")
+        socket.player.isLoggedIn = false
         console.log(socket.player.name + "logged off...")
         socket.player.socket = null
         socket.player = null
@@ -231,6 +235,7 @@ io.on('connection', (socket) => {
             console.log(socket.player.name + " disconnected...")
             loggedinPlayers.splice(loggedinPlayers.indexOf(socket.Player), 1)
             socket.leave("loggedin")
+            socket.player.isLoggedIn = false
             socket.player.socket = null
             socket.player = null
         }
@@ -362,9 +367,11 @@ function travel(player) {
 
     if (turf.booleanEqual(player.currentLocation, player.destination)) {
         player.isTraveling = false
-        player.socket.emit("destinationReached", {
-            currentLocation: player.currentLocation.geometry.coordinates
-        })
+        if (player.isLoggedIn) {
+            player.socket.emit("destinationReached", {
+                currentLocation: player.currentLocation.geometry.coordinates
+            })
+        }
         console.log(player.name + " reached destination in " + ((((new Date().getTime()) - player.startTime) / 1000) / 60) + " minutes.")
     }
 }
@@ -450,57 +457,57 @@ function checkScoring(player) {
                             break
                         }
                     }
-                    if (!found) {
-                        var dist = turf.distance(player.currentLocation, storm.coordinates, units = 'miles')
-                        if (dist > 1 && dist <= 5) {
-                            if (isHail) {
-                                if (storm.size == null || storm.size < 100) {
-                                    player.currentScore += Math.round(hailsmall5 * player.scoreMultiplyer)
-                                    player.totalScore += Math.round(hailsmall5 * player.scoreMultiplyer)
-                                }
-                                else if (storm.size >= 100 && storm.size < 200) {
-                                    player.currentScore += Math.round(hail1inch5 * player.scoreMultiplyer)
-                                    player.totalScore += Math.round(hail1inch5 * player.scoreMultiplyer)
-                                }
-                                else if (storm.size >= 200 && storm.size < 300) {
-                                    player.currentScore += Math.round(hail2inch5 * player.scoreMultiplyer)
-                                    player.totalScore += Math.round(hail2inch5 * player.scoreMultiplyer)
-                                }
-                                else if (storm.size >= 300) {
-                                    player.currentScore += Math.round(hail3inch5 * player.scoreMultiplyer)
-                                    player.totalScore += Math.round(hail3inch5 * player.scoreMultiplyer)
-                                }
-                            } else {
-                                player.currentScore += Math.round(scorefive * player.scoreMultiplyer)
-                                player.totalScore += Math.round(scorefive * player.scoreMultiplyer)
+                }
+                if (!found) {
+                    var dist = turf.distance(player.currentLocation, storm.coordinates, units = 'miles')
+                    if (dist > 1 && dist <= 5) {
+                        if (isHail) {
+                            if (storm.size == null || storm.size < 100) {
+                                player.currentScore += Math.round(hailsmall5 * player.scoreMultiplyer)
+                                player.totalScore += Math.round(hailsmall5 * player.scoreMultiplyer)
                             }
+                            else if (storm.size >= 100 && storm.size < 200) {
+                                player.currentScore += Math.round(hail1inch5 * player.scoreMultiplyer)
+                                player.totalScore += Math.round(hail1inch5 * player.scoreMultiplyer)
+                            }
+                            else if (storm.size >= 200 && storm.size < 300) {
+                                player.currentScore += Math.round(hail2inch5 * player.scoreMultiplyer)
+                                player.totalScore += Math.round(hail2inch5 * player.scoreMultiplyer)
+                            }
+                            else if (storm.size >= 300) {
+                                player.currentScore += Math.round(hail3inch5 * player.scoreMultiplyer)
+                                player.totalScore += Math.round(hail3inch5 * player.scoreMultiplyer)
+                            }
+                        } else {
+                            player.currentScore += Math.round(scorefive * player.scoreMultiplyer)
+                            player.totalScore += Math.round(scorefive * player.scoreMultiplyer)
                         }
-                        else if (dist < 1) {
-                            if (isHail) {
-                                if (storm.size == null || storm.size < 100) {
-                                    player.currentScore += Math.round(hailsmall1 * player.scoreMultiplyer)
-                                    player.totalScore += Math.round(hailsmall1 * player.scoreMultiplyer)
-                                }
-                                else if (storm.size >= 100 && storm.size < 200) {
-                                    player.currentScore += Math.round(hail1inch1 * player.scoreMultiplyer)
-                                    player.totalScore += Math.round(hail1inch1 * player.scoreMultiplyer)
-                                }
-                                else if (storm.size >= 200 && storm.size < 300) {
-                                    player.currentScore += Math.round(hail2inch1 * player.scoreMultiplyer)
-                                    player.totalScore += Math.round(hail2inch1 * player.scoreMultiplyer)
-                                }
-                                else if (storm.size >= 300) {
-                                    player.currentScore += Math.round(hail3inch1 * player.scoreMultiplyer)
-                                    player.totalScore += Math.round(hail3inch1 * player.scoreMultiplyer)
-                                }
-                            }
-                            else {
-                                player.currentScore += Math.round(scoreone * player.scoreMultiplyer)
-                                player.totalScore += Math.round(scoreone * player.scoreMultiplyer)
-                            }
-                        }
-                        player.pointNearChecked.push(storm.coordinates)
                     }
+                    else if (dist < 1) {
+                        if (isHail) {
+                            if (storm.size == null || storm.size < 100) {
+                                player.currentScore += Math.round(hailsmall1 * player.scoreMultiplyer)
+                                player.totalScore += Math.round(hailsmall1 * player.scoreMultiplyer)
+                            }
+                            else if (storm.size >= 100 && storm.size < 200) {
+                                player.currentScore += Math.round(hail1inch1 * player.scoreMultiplyer)
+                                player.totalScore += Math.round(hail1inch1 * player.scoreMultiplyer)
+                            }
+                            else if (storm.size >= 200 && storm.size < 300) {
+                                player.currentScore += Math.round(hail2inch1 * player.scoreMultiplyer)
+                                player.totalScore += Math.round(hail2inch1 * player.scoreMultiplyer)
+                            }
+                            else if (storm.size >= 300) {
+                                player.currentScore += Math.round(hail3inch1 * player.scoreMultiplyer)
+                                player.totalScore += Math.round(hail3inch1 * player.scoreMultiplyer)
+                            }
+                        }
+                        else {
+                            player.currentScore += Math.round(scoreone * player.scoreMultiplyer)
+                            player.totalScore += Math.round(scoreone * player.scoreMultiplyer)
+                        }
+                    }
+                    player.pointNearChecked.push(storm.coordinates)
                 }
             });
         }
