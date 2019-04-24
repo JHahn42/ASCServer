@@ -90,7 +90,7 @@ io.on('connection', (socket) => {
         var success = false
 
         // check if player was previously loggedin and in active list
-        for (var i = 0; i < activePlayers.length(); i++) {
+        for (var i = 0; i < activePlayers.length; i++) {
             var player = activePlayers[i]
             if (player.name == username && player.passkey == pass) {
 
@@ -108,7 +108,7 @@ io.on('connection', (socket) => {
                         "longitude": player.currentLocation.geometry.coordinates[0],
                         "latitude": player.currentLocation.geometry.coordinates[1],
                         "routeGeometry": player.routeGeometry,
-                        "itTraveling": player.isTraveling 
+                        "isTraveling": player.isTraveling 
                     })
                 }
                 else {
@@ -199,7 +199,7 @@ io.on('connection', (socket) => {
             // change to include original cloc in route points
             socket.player.currentLocation = turf.point(geo.coordinates[0])
             socket.player.destination = turf.point(geo.coordinates[geo.coordinates.length - 1])
-            socket.player.routePolyline = geometry
+            socket.player.routeGeometry = geometry
             socket.player.route = route
             socket.player.speed = speed
             socket.player.startTime = new Date().getTime()
@@ -213,26 +213,34 @@ io.on('connection', (socket) => {
     })
 
     socket.on('stopTravel', () => {
-        socket.player.isTraveling = false
-        console.log(socket.player.name + " stopping travel at " + socket.player.currentLocation.geometry.coordinates)
+        if(socket.player.isTraveling) {
+            socket.player.isTraveling = false
+            console.log(socket.player.name + " stopping travel at " + socket.player.currentLocation.geometry.coordinates)
+        }
+        else {
+            // error requested stop travel when player was not traveling
+        }
     })
 
     socket.on('getPlayerUpdate', () => {
-        var start = socket.player.startTime
-        var now = new Date().getTime()
+
         var timeleft = 0
+
         if (socket.player.isTraveling) {
+            var start = socket.player.startTime
+            var now = new Date().getTime()
             timeleft = socket.player.duration - ((now - start) / 1000)
         }
         socket.emit('updatePlayer', {
-            currentLocation: socket.player.currentLocation.geometry.coordinates,
-            currentScore: socket.player.currentScore,
-            totalScore: socket.player.totalScore,
-            timeLeft: timeleft
+            "currentLocation": socket.player.currentLocation.geometry.coordinates,
+            "currentScore": socket.player.currentScore,
+            "totalScore": socket.player.totalScore,
+            "timeLeft": timeleft
         })
     })
 
     socket.on("getWeatherUpdate", () => {
+        
         var now = new Date()
         // delay sending weather data if it is still getting parsed
         if (now.getMinutes() % weatherTiming == 0 && now.getSeconds() < 5) {
@@ -291,6 +299,7 @@ function gameLoop() {
                 clearInterval(runGame)
                 activePlayers.forEach(player => {
                     player.isTraveling = false
+                    player.startTime = null
                     player.route = null
                     player.destination = null
                     player.inStorm = false
