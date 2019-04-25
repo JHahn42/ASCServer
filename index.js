@@ -113,9 +113,11 @@ io.on('connection', (socket) => {
                     {
                         "dailyScore": player.currentScore, 
                         "totalScore": player.totalScore, 
-                        "longitude": player.currentLocation.geometry.coordinates[0],
-                        "latitude": player.currentLocation.geometry.coordinates[1],
+                        "currentLon": player.currentLocation.geometry.coordinates[0],
+                        "currentLat": player.currentLocation.geometry.coordinates[1],
                         "routeGeometry": player.routeGeometry,
+                        "destLon": player.destination.geometry.coordinates[0],
+                        "destLat": player.destination.geometry.coordinates[1],
                         "isTraveling": player.isTraveling 
                     })
                 }
