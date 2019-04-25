@@ -89,73 +89,77 @@ io.on('connection', (socket) => {
     console.log("a user has connected...")
 
     // logs connected user into an account stored on the phone, allows them to retrieve updated data throughout the day
-    socket.on('login', (username, pass, clong, clat, cScore, tScore, sMultiplyer) => {
+    socket.on('login', (username, pass, cScore, tScore, sMultiplyer) => {
 
-        var success = false
+        if (socket.player == null) {
+            var success = false
 
-        // check if player was previously loggedin and in active list
-        for (var i = 0; i < activePlayers.length; i++) {
+            // check if player was previously loggedin and in active list
+            for (var i = 0; i < activePlayers.length; i++) {
 
-            var player = activePlayers[i]
+                var player = activePlayers[i]
 
-            if (player.name == username && player.passkey == pass) {
+                if (player.name == username && player.passkey == pass) {
 
-                socket.player = player
+                    socket.player = player
+                    loggedinPlayers.push(socket.player)
+                    socket.join("loggedin")
+                    socket.player.isLoggedIn = true
+                    socket.player.socket = socket
+                    success = true
+                
+                    if (activeGameTime) {
+
+                        socket.emit("loginFromPrevious", 
+                        {
+                            "dailyScore": player.currentScore, 
+                            "totalScore": player.totalScore, 
+                            "currentLon": player.currentLocation.geometry.coordinates[0],
+                            "currentLat": player.currentLocation.geometry.coordinates[1],
+                            "routeGeometry": player.routeGeometry,
+                            "destLon": player.destination.geometry.coordinates[0],
+                            "destLat": player.destination.geometry.coordinates[1],
+                            "isTraveling": player.isTraveling 
+                        })
+                    }
+                    else {
+                        socket.emit("endOfDay")
+                    }
+                    console.log(player.name + " has logged back in from previous session.")
+                    break
+                }
+            }
+            // if player profile not found in active list, create new player and use passed values
+            if (!success) {
+
+                socket.player = new Player(socket= socket,
+                                            name= username,
+                                            passkey= pass,
+                                            currentScore= cScore,
+                                            totalScore= tScore,
+                                            scoreMultiplyer= sMultiplyer,
+                                            isTraveling= false,
+                                            currentLocation= null,
+                                            destination= null,
+                                            route= null,
+                                            routeGeometry= null)
+
                 loggedinPlayers.push(socket.player)
                 socket.join("loggedin")
                 socket.player.isLoggedIn = true
-                socket.player.socket = socket
-                success = true
-               
-                if (activeGameTime) {
 
-                    socket.emit("loginFromPrevious", 
-                    {
-                        "dailyScore": player.currentScore, 
-                        "totalScore": player.totalScore, 
-                        "currentLon": player.currentLocation.geometry.coordinates[0],
-                        "currentLat": player.currentLocation.geometry.coordinates[1],
-                        "routeGeometry": player.routeGeometry,
-                        "destLon": player.destination.geometry.coordinates[0],
-                        "destLat": player.destination.geometry.coordinates[1],
-                        "isTraveling": player.isTraveling 
-                    })
+                if (activeGameTime) {
+                    socket.emit("loginSuccess")
                 }
                 else {
                     socket.emit("endOfDay")
                 }
-                console.log(player.name + " has logged back in from previous session.")
-                break
+                console.log(socket.player.name + " has logged in for the first time today")
             }
         }
-        // if player profile not found in active list, create new player and use passed values
-        if (!success) {
-
-            socket.player = new Player(socket= socket,
-                                        name= username,
-                                        passkey= pass,
-                                        currentScore= cScore,
-                                        totalScore= tScore,
-                                        scoreMultiplyer= sMultiplyer,
-                                        isTraveling= false,
-                                        currentLocation= turf.point([parseFloat(clong), parseFloat(clat)]),
-                                        destination= null,
-                                        route= null,
-                                        routeGeometry= null)
-
-            loggedinPlayers.push(socket.player)
-            socket.join("loggedin")
-            socket.player.isLoggedIn = true
-            console.log(socket.player.name + " has logged in.")
-
-            if (activeGameTime) {
-                socket.emit("loginSuccess")
-            }
-            else {
-                socket.emit("endOfDay")
-            }
-            console.log(socket.player.name + " has logged in for the first time today")
-        }
+        else {
+            socket.emit('errorMessage', { "errorMessage": "Error on emit('login'): attempting to log into an account while already logged in" })
+        }    
     })
 
     // untie player profile from socket and remove from logged in list, 
@@ -190,7 +194,7 @@ io.on('connection', (socket) => {
             socket.player = null
         }
         else { 
-            console.log("a user who was not logged in has disconnected...")
+            console.log("a user has disconnected...")
         }
     })
 
