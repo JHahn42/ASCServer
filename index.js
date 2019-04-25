@@ -173,7 +173,7 @@ io.on('connection', (socket) => {
         }
         else {
             // emit error can't log out when not logged in
-            socket.emit('error', { "errorMessage": "Error on emit('logoff'): Player was not logged in. Must be logged in to log off." })
+            socket.emit('errorMessage', { "errorMessage": "Error on emit('logoff'): Player was not logged in. Must be logged in to log off." })
         }
     })
 
@@ -206,7 +206,7 @@ io.on('connection', (socket) => {
         }
         else {
             // emit error cannot select start location for active player
-            socket.emit('error', { "errorMessage": "Error on emit('startLocationSelect'): Player has already selected start location for the day." })
+            socket.emit('errorMessage', { "errorMessage": "Error on emit('startLocationSelect'): Player has already selected start location for the day." })
         }
     })
 
@@ -241,12 +241,12 @@ io.on('connection', (socket) => {
             }
             else {
                 // emit error cannot set travel route while player is currently traveling, emit stop travel before setting new route
-                socket.emit('error', { "errorMessage": "Error on emit('setTravelRoute'): Player is currently traveling. Must emit('stopTravel') before selecting a new route." })
+                socket.emit('errorMessage', { "errorMessage": "Error on emit('setTravelRoute'): Player is currently traveling. Must emit('stopTravel') before selecting a new route." })
             }
         }
         else {
             // emit cannot set travel route before chosing a start location with startLocationSelect
-            socket.emit('error', { "errorMessage": "Error on emit('setTravelRoute'): Player must choose a starting location before creating a travel route. Send the start location to the server with emit('startLocationSelect', lon, lat, scoreMultiplier)" })
+            socket.emit('errorMessage', { "errorMessage": "Error on emit('setTravelRoute'): Player must choose a starting location before creating a travel route. Send the start location to the server with emit('startLocationSelect', lon, lat, scoreMultiplier)" })
         }
     })
 
@@ -257,7 +257,7 @@ io.on('connection', (socket) => {
         }
         else {
             // error requested stop travel when player was not traveling
-            socket.emit('error', { "errorMessage": "Error on emit('stopTravel'): Player was not traveling." })
+            socket.emit('errorMessage', { "errorMessage": "Error on emit('stopTravel'): Player was not traveling." })
         }
     })
 
