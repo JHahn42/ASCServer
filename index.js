@@ -107,10 +107,8 @@ io.on('connection', (socket) => {
                     socket.player.isLoggedIn = true
                     socket.player.socket = socket
                     success = true
-                
-                    if (activeGameTime) {
 
-                        socket.emit("loginFromPrevious", 
+                    socket.emit("loginFromPrevious", 
                         {
                             "dailyScore": player.currentScore, 
                             "totalScore": player.totalScore, 
@@ -121,8 +119,7 @@ io.on('connection', (socket) => {
                             "destLat": player.destination.geometry.coordinates[1],
                             "isTraveling": player.isTraveling 
                         })
-                    }
-                    else {
+                    if (!activeGameTime) {
                         socket.emit("endOfDay")
                     }
                     console.log(player.name + " has logged back in from previous session.")
@@ -148,10 +145,9 @@ io.on('connection', (socket) => {
                 socket.join("loggedin")
                 socket.player.isLoggedIn = true
 
-                if (activeGameTime) {
-                    socket.emit("loginSuccess")
-                }
-                else {
+                socket.emit("loginSuccess")
+
+                if (!activeGameTime) {
                     socket.emit("endOfDay")
                 }
                 console.log(socket.player.name + " has logged in for the first time today")
