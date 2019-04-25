@@ -19,7 +19,7 @@ module.exports = {
                 {"name": "Hail", "type": "point", "instances": []}
             ]
         }
-
+        // get the storm warning and watches
         request.get({
             url: url,
             json: true,
@@ -67,7 +67,7 @@ module.exports = {
         const tornadoUrl ='https://www.spc.noaa.gov/climo/reports/today_torn.csv';
         const hailUrl ='https://www.spc.noaa.gov/climo/reports/today_hail.csv';
 
-        // replace with today's wind url
+        // get the wind reports
         papa.parse(windUrl, {
             download: true,
             header: true,
@@ -82,7 +82,7 @@ module.exports = {
             }
         });
 
-        // replace with today's tornado url
+        // get the tornado reports
         papa.parse(tornadoUrl, {
             download: true,
             header: true,
@@ -97,7 +97,7 @@ module.exports = {
             }
         });
         
-        // replace with today's tornado url
+        // get the hail reports
         papa.parse(hailUrl, {
             download: true,
             header: true,
