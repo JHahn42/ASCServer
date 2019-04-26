@@ -348,9 +348,6 @@ function gameLoop() {
                 clearInterval(runGame)
                 activePlayers.forEach(player => {
                     player.isTraveling = false
-                    player.startTime = null
-                    player.route = null
-                    player.destination = null
                     player.inStorm = false
                     player.stormsInside = []
                     player.pointNearChecked = []
