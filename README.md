@@ -13,7 +13,7 @@ The Server/App connection and communication is handled with socketIO, a real-tim
 
 ![chart]
 
-[chart]: https://i.imgur.com/dFeRm5k.png?1 "Emit Flow Chart"
+[chart]: https://i.imgur.com/kkWt6Bx.png?1 "Emit Flow Chart"
 For the Server and Mobile App to function properly, there is a set order that the app side emitters may emit to receive valid data from the server.
 
 #### Connection
@@ -174,4 +174,52 @@ socket.emit("startLocationSelect", longitude, latitude, scoreMultiplyer);
 The score multiplyer is decided by whether the player is continuing from a previous location or selecting a new location. A brand new player should always have a scoreMultiplier of 1.
 Once a starting location has been selected and emitted, the player may select a travel route and receive player updates.
 
----  
+---
+#### Set Travel Route
+As long as the player is logged in, has chosen a starting location, and is not already traveling, they may set a travel route and start traveling along it through:
+```Java
+socket.emit("setTravelRoute", geometry, distance, duration, destinationLongitude, destinationLatitude);
+```
+Where **geometry** is an encoded polyline containing the linestring coordinates for the selected route, **distance** is how long the route is in meters, and **duration** is the time in seconds that the route should take to complete.
+
+---
+#### Stop Travel
+At any point during a player's travel route, they may stop movement with:
+```Java
+socket.emit("stopTravel");
+```
+And the player will stop movement immediately.
+
+---
+#### Player Update
+At any point after loggin in and already having a start location selected, the app may request a player update from the server through:
+```Java
+socket.emit("getPlayerUpdate");
+```
+and in response the server sends an **updatePlayer** emit to the app, which contains a JSON object formatted as:
+```Javascript
+{
+    "currentLocation": [longitude, latitude],
+    "currentScore": currentScore,
+    "totalScore": totalScore,
+    "timeLeft": timeleft
+}
+```
+where time left is the number of seconds left on the current route if player is traveling, 0 otherwise.
+
+---
+#### Log Out
+At any point after logging in, the user may log out of their current profile with:
+```Java
+socket.emit("logout");
+```
+
+---
+#### Disconnect
+When the connection between the app and server is lost for any reason, a **disconnect** emit is automatically sent to both server and app, and any necessary work for handling a disconnect can be placed into the disconnect listener.
+
+---
+#### Error Messages
+If at any point the server receives an illegal emit for the Player's current status, the server will send to the app an error message detailing the illegal action, which can be picked up by the app through a listener on **errorMessage**
+
+---
