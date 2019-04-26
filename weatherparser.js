@@ -73,7 +73,7 @@ module.exports = {
             header: true,
             step: function(row) {
                 var obj = row.data[0]
-                if (obj.Time != "") {
+                if (obj.Time != null && obj.Lon != null && obj.Lat != null) {
                     wind.push({ "time": obj.Time, "coordinates": turf.point([parseFloat(obj.Lon), parseFloat(obj.Lat)]) })
                 }
             },
@@ -88,7 +88,7 @@ module.exports = {
             header: true,
             step: function(row) {
                 var obj = row.data[0]
-                if (obj.Time != "") {
+                if (obj.Time != null && obj.Lon != null && obj.Lat != null) {
                     tornado.push({ "time": obj.Time, "coordinates": turf.point([parseFloat(obj.Lon), parseFloat(obj.Lat)]) })
                 }
             },
@@ -103,7 +103,7 @@ module.exports = {
             header: true,
             step: function(row) {
                 var obj = row.data[0]
-                if (obj.Time != "") {
+                if (obj.Time != null && obj.Lon != null && obj.Lat != null) {
                     hail.push({ "time": obj.Time, "size": obj.Size, "coordinates": turf.point([parseFloat(obj.Lon), parseFloat(obj.Lat)]) })
                 }
             },

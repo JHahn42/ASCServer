@@ -78,6 +78,7 @@ var loggedinPlayers = []
 var activeGameTime = true
 const dayBegin = 10
 const dayEnd = 23
+var emittedEndOfDay = false
 
 startGameTimer()
 
@@ -120,6 +121,7 @@ io.on('connection', (socket) => {
                             "isTraveling": player.isTraveling 
                         })
                     if (!activeGameTime) {
+                        console.log("emitting endOfDay to " + socket.player.name)
                         socket.emit("endOfDay")
                     }
                     console.log(player.name + " has logged back in from previous session.")
@@ -148,6 +150,7 @@ io.on('connection', (socket) => {
                 socket.emit("loginSuccess")
 
                 if (!activeGameTime) {
+                    console.log("emitting endOfDay to " + socket.player.name)
                     socket.emit("endOfDay")
                 }
                 console.log(socket.player.name + " has logged in for the first time today")
@@ -262,20 +265,24 @@ io.on('connection', (socket) => {
     })
 
     socket.on('getPlayerUpdate', () => {
+        if (activePlayers.includes(socket.player)) {
+            var timeleft = 0
 
-        var timeleft = 0
-
-        if (socket.player.isTraveling) {
-            var start = socket.player.startTime
-            var now = new Date().getTime()
-            timeleft = socket.player.duration - ((now - start) / 1000)
+            if (socket.player.isTraveling) {
+                var start = socket.player.startTime
+                var now = new Date().getTime()
+                timeleft = socket.player.duration - ((now - start) / 1000)
+            }
+            socket.emit('updatePlayer', {
+                "currentLocation": socket.player.currentLocation.geometry.coordinates,
+                "currentScore": socket.player.currentScore,
+                "totalScore": socket.player.totalScore,
+                "timeLeft": timeleft
+            })
         }
-        socket.emit('updatePlayer', {
-            "currentLocation": socket.player.currentLocation.geometry.coordinates,
-            "currentScore": socket.player.currentScore,
-            "totalScore": socket.player.totalScore,
-            "timeLeft": timeleft
-        })
+        else {
+            socket.emit('errorMessage', { "errorMessage": "Error on emit('getPlayerUpdate'): Player is not yet active. Select a starting position first."})
+        }
     })
 
     socket.on("getWeatherUpdate", () => {
@@ -519,7 +526,7 @@ function startGameTimer() {
     // get the current time and see if its in active time
     var d = new Date()
     checkGameTime(d)
-    console.log("game time is " + activeGameTime)
+    console.log("active game time is " + activeGameTime)
     var intervalId = setInterval(runGameClock, 60 * 1000 - d.getSeconds() * 1000)
 
     function runGameClock() {
@@ -541,12 +548,17 @@ function startGameTimer() {
                         fillStormArrays()
                          // send weather update to all players currently logged in
                         io.in("loggedin").emit("weatherUpdate", formatWeather())
+                        console.log("sent updated weather to all logged in players.")
                     }  
                 }, 5000)
             }
         }
         else {
-            io.in("loggedin").emit("endOfDay")
+            if(emittedEndOfDay == false) {
+                console.log("emitting end of day to all logged in users...")
+                io.in("loggedin").emit("endOfDay")
+                emittedEndOfDay = true
+            }
         }
         clearInterval(intervalId)
         d = new Date()
@@ -563,6 +575,7 @@ function checkGameTime(d) {
             activeGameTime = true
             // reset active players list if it somehow survived the night
             activePlayers = []
+            emittedEndOfDay = false
             gameLoop()   
         }
     } else {
@@ -584,52 +597,64 @@ function stormsHaveChanged() {
     if (tornadoWarn.length == storms.storms[0].instances.length) {
         for (var i = 0; i < tornadoWarn.length; i++) {
             if (!turf.booleanEqual(tornadoWarn[i], storms.storms[0].instances[i])) {
+                console.log("tornadoWarns have changed.")
                 return true
             }
         }
     }
     else {
+        console.log("tornadoWarns have changed.")
         return true
     }
     if (tornadoWatch.length == storms.storms[1].instances.length) {
         for (var i = 0; i < tornadoWatch.length; i++) {
             if (!turf.booleanEqual(tornadoWatch[i], storms.storms[1].instances[i])) {
+                console.log("tornadoWatches have changed.")
                 return true
             }
         }
     }
     else {
+        console.log("tornadoWatches have changed.")
         return true
     }
     if (tStormWarn.length == storms.storms[2].instances.length) {
         for (var i = 0; i < tStormWarn.length; i++) {
             if (!turf.booleanEqual(tStormWarn[i], storms.storms[2].instances[i])) {
+                console.log("thunderStormWarns have changed.")
                 return true
             }
         }
     }
     else {
+        console.log("thunderStormWarns have changed.")
         return true
     }
     if (tStormWatch.length == storms.storms[3].instances.length) {
         for (var i = 0; i < tStormWatch.length; i++) {
             if (!turf.booleanEqual(tStormWatch[i], storms.storms[3].instances[i])) {
+                console.log("thunderStormWatches have changed.")
                 return true
             }
         }
     }
     else {
+        console.log("thunderStormWatches have changed.")
         return true
     }
     if (wind.length != storms.storms[4].instances.length) {
+        console.log("wind reports updated.")
         return true
     }
     if (tornado.length != storms.storms[5].instances.length) {
+        console.log("tornado reports updated.")
         return true
     }
     if (hail.length != storms.storms[6].instances.length) {
+        console.log("hail reports updated.")
         return true
     }
+    console.log("no storm reports have changed.")
     return false
 }
 
