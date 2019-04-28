@@ -297,7 +297,28 @@ io.on('connection', (socket) => {
         } 
         console.log("sent user weather")
     })
+    
+    // tell app if game is in playable hours, tell number of seconds until it is playable if not
+    // this function may need to be updated if game is set to shut down before midnight.
+    socket.on("getGameHours", () => {
+        var secleft = 0
+        if(!activeGameTime) {
+            var now = new Date()
+            var open = new Date()
+            open.setHours(dayBegin)
+            open.setMinutes(0)
+            open.setSeconds(0)
+            open.setMilliseconds(0)
+            var msUntilOpen = open.getTime() - now.getTime()
+            secleft = ~~( msUntilOpen / 1000)
+        }
 
+        socket.emit("gameHours", {
+            "isActiveHours": activeGameTime,
+            "startTime": dayBegin,
+            "timeUntilOpen": secleft
+        })
+    })
 });
 
 // Gameplay

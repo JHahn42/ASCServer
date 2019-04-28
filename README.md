@@ -172,7 +172,7 @@ After logging in for the first time, or the first time that day, and before bein
 socket.emit("startLocationSelect", longitude, latitude, scoreMultiplyer);
 ```
 The score multiplyer is decided by whether the player is continuing from a previous location or selecting a new location. A brand new player should always have a scoreMultiplier of 1.
-Once a starting location has been selected and emitted, the player may select a travel route and receive player updates.
+Once a starting location has been selected and emitted, the player may select a travel route and receive player updates. startLocationSelect may only be called once per day per account.
 
 ---
 #### Set Travel Route
